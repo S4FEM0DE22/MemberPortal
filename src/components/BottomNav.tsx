@@ -1,14 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, User, Settings as SettingsIcon } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 export default function BottomNav() {
+  const { t } = useApp();
   const location = useLocation();
 
   const items = [
-    { name: 'หน้าแรก', path: '/', icon: LayoutDashboard },
-    { name: 'สมาชิก', path: '/members', icon: Users },
-    { name: 'โปรไฟล์', path: '/profile', icon: User },
-    { name: 'ตั้งค่า', path: '/settings', icon: SettingsIcon },
+    { name: t('dashboard'), path: '/', icon: LayoutDashboard },
+    { name: t('members'), path: '/members', icon: Users },
+    { name: t('profile'), path: '/profile', icon: User },
+    { name: t('settings'), path: '/settings', icon: SettingsIcon },
   ];
 
   return (

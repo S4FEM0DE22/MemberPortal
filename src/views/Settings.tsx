@@ -5,27 +5,59 @@ import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
-  const { theme, toggleTheme, language, setLanguage, t } = useApp();
+  const { theme, toggleTheme, language, setLanguage, t, user, logout } = useApp();
   const [pushNotif, setPushNotif] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [showPwdSuccess, setShowPwdSuccess] = useState(false);
+  const [pwdError, setPwdError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handlePasswordUpdate = (e: React.FormEvent) => {
+  const isGoogleUser = user?.providerData.some(p => p.providerId === 'google.com');
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPwdError(null);
     setIsUpdatingPassword(true);
-    setTimeout(() => {
+    
+    try {
+      const { updatePassword } = await import('firebase/auth');
+      const formData = new FormData(e.currentTarget as HTMLFormElement);
+      const newPassword = formData.get('new_password') as string;
+      const confirmPassword = formData.get('confirm_new_password') as string;
+      
+      if (newPassword !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      if (user) {
+        await updatePassword(user, newPassword);
+        setShowPwdSuccess(true);
+        setTimeout(() => setShowPwdSuccess(false), 3000);
+        (e.target as HTMLFormElement).reset();
+      }
+    } catch (error: any) {
+      setPwdError(error.message);
+    } finally {
       setIsUpdatingPassword(false);
-      setShowPwdSuccess(true);
-      setTimeout(() => setShowPwdSuccess(false), 3000);
-    }, 1500);
+    }
   };
 
-  const handleDeleteAccount = () => {
-    // Simulate account deletion and logout
-    navigate('/login');
+  const handleDeleteAccount = async () => {
+    try {
+      if (user) {
+        await user.delete();
+        await logout();
+        navigate('/login');
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/requires-recent-login') {
+        alert(t('error_recent_login'));
+      } else {
+        alert(error.message);
+      }
+    }
   };
 
   return (
@@ -134,51 +166,69 @@ export default function Settings() {
               <Shield className="text-primary w-6 h-6" />
               {t('security')}
             </h3>
-            <form onSubmit={handlePasswordUpdate} className="space-y-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('current_password')}</label>
-                <input 
-                  className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                  placeholder="••••••••" 
-                  type="password" 
-                  required 
-                />
+            
+            {isGoogleUser ? (
+              <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-4">
+                <Info className="text-blue-500 w-6 h-6 shrink-0" />
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  {t('google_user_pwd_msg')}
+                </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            ) : (
+              <form onSubmit={handlePasswordUpdate} className="space-y-6">
+                {pwdError && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm font-medium">
+                    {pwdError}
+                  </div>
+                )}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('new_password')}</label>
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('current_password')}</label>
                   <input 
+                    name="current_password"
                     className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder={t('new_password')} 
+                    placeholder="••••••••" 
                     type="password" 
                     required 
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('confirm_new_password')}</label>
-                  <input 
-                    className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder={t('confirm_new_password')} 
-                    type="password" 
-                    required 
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('new_password')}</label>
+                    <input 
+                      name="new_password"
+                      className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                      placeholder={t('new_password')} 
+                      type="password" 
+                      required 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('confirm_new_password')}</label>
+                    <input 
+                      name="confirm_new_password"
+                      className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                      placeholder={t('confirm_new_password')} 
+                      type="password" 
+                      required 
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="pt-4">
-                <button 
-                  className="bg-primary hover:bg-primary-container text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-70 flex items-center gap-2 uppercase tracking-wider" 
-                  type="submit"
-                  disabled={isUpdatingPassword}
-                >
-                  {isUpdatingPassword && (
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                      <Sliders className="w-4 h-4" />
-                    </motion.div>
-                  )}
-                  {isUpdatingPassword ? t('processing') : t('update_password')}
-                </button>
-              </div>
-            </form>
+                <div className="pt-4">
+                  <button 
+                    className="bg-primary hover:bg-primary-container text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-70 flex items-center gap-2 uppercase tracking-wider" 
+                    type="submit"
+                    disabled={isUpdatingPassword}
+                  >
+                    {isUpdatingPassword && (
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                        <Sliders className="w-4 h-4" />
+                      </motion.div>
+                    )}
+                    {isUpdatingPassword ? t('processing') : t('update_password')}
+                  </button>
+                </div>
+              </form>
+            )}
           </motion.div>
         </section>
 
@@ -221,7 +271,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('member_since')}</p>
-                  <p className="text-sm font-bold text-on-surface">ตุลาคม 2022</p>
+                  <p className="text-sm font-bold text-on-surface">{t('member_since_date')}</p>
                 </div>
               </div>
             </div>

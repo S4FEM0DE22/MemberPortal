@@ -64,16 +64,16 @@ export default function Register() {
             <BadgeCheck className="w-12 h-12 fill-white text-primary" />
             <h1 className="font-heading text-4xl font-extrabold tracking-tight">MemberPortal</h1>
           </div>
-          <h2 className="font-heading text-3xl font-semibold mb-4 text-white">เริ่มต้นการเดินทางของคุณ</h2>
+          <h2 className="font-heading text-3xl font-semibold mb-4 text-white">{t('start_journey')}</h2>
           <p className="text-lg opacity-90 leading-relaxed mb-8">
-            สมัครสมาชิกเพื่อเข้าถึงฟีเจอร์ระดับพรีเมียม สั่งสมคอนเนคชัน และเติบโตไปพร้อมกับชุมชนมืออาชีพของเรา
+            {t('register_desc_hero')}
           </p>
           <ul className="space-y-4">
             {[
-              "เข้าถึงแดชบอร์ดส่วนตัว",
-              "ระบบจัดการสมาชิกอัจฉริยะ",
-              "สิทธิพิเศษและส่วนลดกิจกรรม",
-              "รับการแจ้งเตือนแบบเรียลไทม์"
+              t('feat_dashboard'),
+              t('feat_mgmt'),
+              t('feat_perks'),
+              t('feat_realtime')
             ].map((item, idx) => (
               <li key={idx} className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
@@ -104,8 +104,8 @@ export default function Register() {
 
           <div className="bg-surface-container border border-outline-variant p-8 md:p-10 rounded-2xl shadow-sm">
             <header className="mb-8">
-              <h2 className="font-heading text-2xl font-bold mb-1 text-on-surface">สมัครสมาชิกใหม่</h2>
-              <p className="text-sm text-on-surface-variant">สร้างบัญชีของคุณเพื่อเริ่มต้นใช้งาน</p>
+              <h2 className="font-heading text-2xl font-bold mb-1 text-on-surface">{t('register_new')}</h2>
+              <p className="text-sm text-on-surface-variant">{t('create_account_desc')}</p>
             </header>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -115,13 +115,13 @@ export default function Register() {
                 </div>
               )}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="fullName">ชื่อ-นามสกุล</label>
+                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="fullName">{t('full_name')}</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
                   <input
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-outline"
                     id="fullName"
-                    placeholder="กรอกชื่อ-นามสกุลของคุณ"
+                    placeholder={t('name_placeholder')}
                     required
                     type="text"
                     value={fullName}
@@ -167,7 +167,7 @@ export default function Register() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-on-surface-variant mt-1">รหัสผ่านต้องมีความยาวสัญลักษณ์ 8 ตัวขึ้นไป</p>
+                <p className="text-[10px] text-on-surface-variant mt-1">{t('pwd_hint')}</p>
               </div>
 
               <div className="flex items-start gap-3 cursor-pointer group mt-2">
@@ -180,7 +180,7 @@ export default function Register() {
                   required
                 />
                 <label className="text-[13px] text-on-surface-variant cursor-pointer leading-snug" htmlFor="agree">
-                  ฉันยอมรับ <Link to="#" className="text-primary font-semibold hover:underline">ข้อตกลงการใช้งาน</Link> และ <Link to="#" className="text-primary font-semibold hover:underline">นโยบายความเป็นส่วนตัว</Link>
+                  {t('agree_text')} <Link to="#" className="text-primary font-semibold hover:underline">{t('terms_service')}</Link> {t('and')} <Link to="#" className="text-primary font-semibold hover:underline">{t('privacy_policy')}</Link>
                 </label>
               </div>
 
@@ -189,7 +189,7 @@ export default function Register() {
                 type="submit"
                 disabled={!agreed || isLoading}
               >
-                <span>{isLoading ? t('processing') : 'สร้างบัญชี'}</span>
+                <span>{isLoading ? t('processing') : t('sign_up')}</span>
                 {!isLoading && <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
@@ -197,7 +197,7 @@ export default function Register() {
             <div className="mt-8 pt-6 border-t border-outline-variant flex flex-col items-center gap-6">
               <div className="flex items-center gap-4 w-full">
                 <div className="h-px bg-outline-variant flex-1"></div>
-                <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">หรือสมัครด้วย</span>
+                <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">{t('or_signup_with')}</span>
                 <div className="h-px bg-outline-variant flex-1"></div>
               </div>
 
@@ -212,7 +212,7 @@ export default function Register() {
               </div>
 
               <p className="text-sm text-on-surface-variant">
-                มีบัญชีอยู่แล้วใช่ไหม? <Link to="/login" className="text-primary font-bold hover:underline">เข้าสู่ระบบที่นี่</Link>
+                {t('already_have_account')} <Link to="/login" className="text-primary font-bold hover:underline">{t('login_here')}</Link>
               </p>
             </div>
           </div>

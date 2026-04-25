@@ -90,6 +90,7 @@ interface AppContextType {
   members: Member[];
   addMember: (member: Member) => Promise<void>;
   updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
+  updateProfileData: (updates: { fullName?: string, photoURL?: string, phone?: string }) => Promise<void>;
   deleteMember: (id: string) => Promise<void>;
   bulkAddMembers: (members: Member[]) => Promise<void>;
   exportMembers: () => Promise<void>;
@@ -110,19 +111,19 @@ const INITIAL_MEMBERS: Member[] = [
 
 const translations = {
   th: {
-    dashboard: 'ภาพรวมแดชบอร์ด',
-    welcome: 'ยินดีต้อนรับกลับมา',
-    today_happening: 'นี่คือสิ่งที่เกิดขึ้นกับชุมชนของคุณในวันนี้',
+    dashboard: 'แดชบอร์ด',
+    welcome: 'ยินดีต้อนรับ',
+    today_happening: 'วันนี้เกิดอะไรขึ้นบ้าง',
     new_member: 'สมาชิกใหม่',
     total_members: 'สมาชิกทั้งหมด',
     active_subscriptions: 'การสมัครสมาชิกที่ใช้งานอยู่',
     pending_approval: 'รอการอนุมัติ',
-    must_action: 'ต้องดำเนินการ',
+    must_action: 'ต้องจัดการ',
     recent_activity: 'กิจกรรมล่าสุด',
     view_all: 'ดูทั้งหมด',
     member_tier: 'ระดับสมาชิก',
     export_report: 'ส่งออกรายงาน',
-    download_csv: 'ดาวน์โหลดไฟล์ CSV รายเดือน',
+    download_csv: 'ดาวน์โหลด CSV',
     home: 'หน้าแรก',
     members: 'สมาชิก',
     profile: 'โปรไฟล์',
@@ -141,13 +142,13 @@ const translations = {
     danger_zone: 'โซนอันตราย',
     delete_account_desc: 'เมื่อคุณลบบัญชีแล้ว จะไม่สามารถย้อนกลับได้ โปรดแน่ใจก่อนดำเนินการ',
     delete_account: 'ลบบัญชี',
-    member_details: 'รายละเอียดบัญชี',
+    member_details: 'รายละเอียดสมาชิก',
     user_id: 'รหัสผู้ใช้',
     member_since: 'เป็นสมาชิกตั้งแต่',
     account_status: 'สถานะบัญชี',
     active: 'ใช้งานอยู่',
-    renewal_alert: 'สมาชิกของคุณจะต่ออายุในอีก {days} วัน',
-    manage_plan: 'จัดการแผน',
+    renew_in: 'สมาชิกของคุณจะต่ออายุในอีก {days} วัน',
+    manage_plan: 'จัดการแผนการเป็นสมาชิก',
     renewal_payment: 'ชำระเงินต่ออายุ',
     annual_gold: 'สมาชิกทองรายปี',
     approved_request: 'คำขอใหม่ได้รับการอนุมัติ',
@@ -175,11 +176,12 @@ const translations = {
     all: 'ทั้งหมด',
     online: 'ออนไลน์',
     pending: 'รอดำเนินการ',
-    clear_filters: 'ล้างตัวกรองทั้งหมด',
+    clear_filters: 'ล้างตัวกรอง',
+    clear_all_filters: 'ล้างตัวกรองทั้งหมด',
     member: 'สมาชิก',
     join_date: 'วันที่เข้าร่วม',
     actions: 'การจัดการ',
-    no_results: 'ไม่พบข้อมูลสมาชิกที่ค้นหา',
+    no_results: 'ไม่พบผลลัพธ์',
     invite_new: 'เชิญสมาชิกใหม่',
     invite_desc: 'ส่งคำเชิญเข้าร่วมระบบผ่านอีเมล',
     full_name: 'ชื่อ-นามสกุล',
@@ -212,65 +214,110 @@ const translations = {
     enabled: 'เปิดใช้งาน',
     disabled: 'ปิดใช้งาน',
     communication: 'การสื่อสาร',
-    newsletter_subscription: 'สมัครรับจดหมายข่าว',
-    newsletter_desc: 'รับข่าวสารและโปรโมชั่นผ่านอีเมล',
+    newsletter_subscription: 'สมัครรับข่าวสาร',
+    newsletter_desc: 'รับอัปเดตรายสัปดาห์และข่าวเด่น',
     push_notifications: 'การแจ้งเตือนแบบพุช',
-    push_desc: 'การแจ้งเตือนแบบเรียลไทม์บนเบราว์เซอร์',
-    pwd_update_success: 'อัปเดตรหัสผ่านสำเร็จแล้ว',
-    settings_desc: 'จัดการการตั้งค่าบัญชีและความปลอดภัยของคุณ',
-    processing: 'กำลังดำเนินการ...',
-    are_you_sure: 'คุณแน่ใจหรือไม่?',
-    delete_confirm_desc: 'การดำเนินการนี้ไม่สามารถย้อนกลับได้ ซึ่งจะลบบัญชีของคุณอย่างถาวรและนำข้อมูลของคุณออกจากเซิร์ฟเวอร์ของเรา',
-    yes_delete: 'ใช่ ลบบัญชี',
+    push_desc: 'รับการแจ้งเตือนทันทีบนอุปกรณ์ของคุณ',
     email_notif: 'การแจ้งเตือนทางอีเมล',
     email_notif_desc: 'สรุปและอัปเดตรายสัปดาห์',
-    push_notif_desc: 'รับการแจ้งเตือนบนอุปกรณ์ของคุณ',
-    renew_in: 'สมาชิกของคุณจะต่ออายุในอีก {days} วัน',
     activities: 'กิจกรรมล่าสุด',
     activities_desc: 'ประวัติการดำเนินการทั้งหมดในระบบ',
     search_activities: 'ค้นหากิจกรรม...',
     activity_details: 'รายละเอียดกิจกรรม',
-    event_time: 'เวลาที่เกิด',
-    ref_number: 'เลขที่อ้างอิง',
+    event_time: 'เวลาเกิดเหตุการณ์',
+    ref_number: 'หมายเลขเลขอ้างอิง',
     check_more: 'ตรวจสอบเพิ่มเติม',
-    summary_movement: 'สรุปความเคลื่อนไหว',
+    summary_movement: 'สรุปการเคลื่อนไหว',
     this_week: 'สัปดาห์นี้',
-    success_trans: 'ธุรกรรมสำเร็จ',
+    success_trans: 'รายการที่สำเร็จ',
     quick_filter: 'ตัวกรองด่วน',
     payment: 'การชำระเงิน',
     system: 'ระบบ',
     notification: 'การแจ้งเตือน',
     welcome_back: 'ยินดีต้อนรับกลับมา',
-    login_desc: 'กรุณากรอกรายละเอียดเพื่อเข้าสู่ระบบ',
+    login_desc: 'กรุณากรอกข้อมูลเพื่อเข้าสู่ระบบ',
     password: 'รหัสผ่าน',
     forgot_password: 'ลืมรหัสผ่าน?',
-    remember_me: 'จดจำฉันไว้ 30 วัน',
+    remember_me: 'จดจำฉันเป็นเวลา 30 วัน',
     login_button: 'เข้าสู่ระบบ',
-    no_account: 'ยังไม่มีบัญชีใช่ไหม?',
+    delete_member: 'ลบสมาชิก',
+    unsuspend: 'ยกเลิกการระงับ',
+    generate_random: 'สุ่มเพิ่มสมาชิก',
+    google_user_pwd_msg: 'คุณเข้าสู่ระบบด้วย Google คุณสามารถจัดการรหัสผ่านได้ผ่านการตั้งค่าบัญชี Google ของคุณ',
+    error_recent_login: 'กรุณาออกจากระบบแล้วเข้าใหม่เพื่อดำเนินการลบชื่อผู้ใช้นี้',
+    profile_desc_short: 'ข้อมูลส่วนตัว',
+    account: 'บัญชี',
+    community_growing: 'ชุมชนที่กำลังเติบโต',
+    growth_msg: 'ดูว่ากิจกรรมของสมาชิกและการลงทะเบียนใหม่ส่งผลต่อชุมชนของเราอย่างไร',
+    see_full_analytics: 'ดูบทวิเคราะห์ทั้งหมด',
+    action_required: 'ต้องจัดการ',
+    manage_now: 'จัดการตอนนี้',
+    no_account: "ยังไม่มีบัญชีใช่หรือไม่?",
     register_free: 'สมัครสมาชิกฟรี',
+    start_journey: 'เริ่มต้นการเดินทางของคุณ',
+    register_desc_hero: 'ลงชื่อเข้าใช้เพื่อเข้าถึงฟีเจอร์พรีเมียม สร้างเครือข่าย และเติบโตไปกับชุมชนมืออาชีพของเรา',
+    feat_dashboard: 'เข้าถึงแดชบอร์ดส่วนตัว',
+    feat_mgmt: 'ระบบจัดการสมาชิกอัจฉริยะ',
+    feat_perks: 'สิทธิประโยชน์และของรางวัลพิเศษ',
+    feat_realtime: 'การแจ้งเตือนแบบเรียลไทม์',
+    register_new: 'ลงทะเบียนบัญชีใหม่',
+    create_account_desc: 'สร้างบัญชีของคุณเพื่อเริ่มต้น',
+    or_signup_with: 'หรือสมัครสมาชิกด้วย',
+    already_have_account: 'มีบัญชีอยู่แล้วใช่ไหม?',
+    login_here: 'เข้าสู่ระบบที่นี่',
+    pwd_hint: 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร',
+    agree_text: 'ฉันยอมรับใน',
+    and: 'และ',
+    sign_up: 'สร้างบัญชี',
     or_continue: 'หรือดำเนินการต่อด้วย',
     privacy_policy: 'นโยบายความเป็นส่วนตัว',
     terms_service: 'เงื่อนไขการให้บริการ',
     contact_support: 'ติดต่อฝ่ายสนับสนุน',
     elevate_network: 'ยกระดับเครือข่ายมืออาชีพของคุณ',
-    elevate_desc: 'เข้าถึงแหล่งข้อมูลพิเศษ จัดการสิทธิประโยชน์การเป็นสมาชิก และเชื่อมต่อกับผู้นำในอุตสาหกรรมในสภาพแวดล้อมที่เป็นระบบและมีประสิทธิภาพ',
+    elevate_desc: 'เข้าถึงทรัพยากรพิเศษ จัดการสิทธิประโยชน์การเป็นสมาชิก และเชื่อมต่อกับผู้นำในอุตสาหกรรมในสภาพแวดล้อมที่เป็นโครงสร้างและมีประสิทธิภาพ',
     active_members: 'สมาชิกที่ใช้งานอยู่',
     daily_activities: 'กิจกรรมรายวัน',
+    realtime_feed: 'ฟีดระบบเรียลไทม์',
+    end_of_updates: 'สิ้นสุดการอัปเดตล่าสุด',
+    days_ago: '{days} วันที่แล้ว',
+    new_member_registered: 'สมาชิกใหม่ลงทะเบียนแล้ว',
+    subscription_cancelled: 'ยกเลิกการสมัครสมาชิกแล้ว',
+    payment_failed: 'การชำระเงินล้มเหลว',
+    system_maintenance: 'การบำรุงรักษาระบบ',
+    new_admin_added: 'เพิ่มผู้ดูแลระบบใหม่',
+    unspecified_name: 'ไม่ระบุชื่อ',
+    volunteers: 'อาสาสมัคร',
+    committee_members: 'คณะกรรมการ',
+    event_attendees: 'ผู้เข้าร่วมกิจกรรม',
+    other: 'อื่นๆ',
+    staff: 'พนักงาน',
+    donors: 'ผู้บริจาค',
+    general: 'ทั่วไป',
+    are_you_sure: 'คุณแน่ใจหรือไม่?',
+    settings_desc: 'จัดการการตั้งค่าแอปพลิเคชันและความปลอดภัย',
+    processing: 'กำลังดำเนินการ...',
+    delete_confirm_desc: 'คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีของคุณ? การดำเนินการนี้ไม่สามารถย้อนกลับได้และข้อมูลทั้งหมดของคุณจะถูกลบอย่างถาวร',
+    yes_delete: 'ใช่, ลบบัญชี',
+    pwd_update_success: 'อัปเดตรหัสผ่านสำเร็จแล้ว',
+    push_notif_desc: 'รับการแจ้งเตือนทันทีบนอุปกรณ์ของคุณ',
+    general_settings: 'การตั้งค่าทั่วไป',
+    member_subscription: 'การสมัครสมาชิก',
+    member_since_date: '14 ตุลาคม 2021',
   },
   en: {
-    dashboard: 'Dashboard Overview',
-    welcome: 'Welcome back',
-    today_happening: "Here's what's happening in your community today.",
+    dashboard: 'Dashboard',
+    welcome: 'Welcome',
+    today_happening: 'What is happening today',
     new_member: 'New Member',
     total_members: 'Total Members',
     active_subscriptions: 'Active Subscriptions',
     pending_approval: 'Pending Approval',
-    must_action: 'Must Action',
+    must_action: 'Action Required',
     recent_activity: 'Recent Activity',
     view_all: 'View All',
-    member_tier: 'Member Tiers',
+    member_tier: 'Member Tier',
     export_report: 'Export Report',
-    download_csv: 'Download monthly CSV file',
+    download_csv: 'Download CSV',
     home: 'Home',
     members: 'Members',
     profile: 'Profile',
@@ -289,12 +336,12 @@ const translations = {
     danger_zone: 'Danger Zone',
     delete_account_desc: 'Once you delete your account, it cannot be undone. Please be sure before proceeding.',
     delete_account: 'Delete Account',
-    member_details: 'Account Details',
+    member_details: 'Member Details',
     user_id: 'User ID',
     member_since: 'Member since',
     account_status: 'Account Status',
     active: 'Active',
-    renewal_alert: 'Your membership will renew in {days} days',
+    renew_in: 'Your membership will renew in {days} days',
     manage_plan: 'Manage Plan',
     renewal_payment: 'Renewal Payment',
     annual_gold: 'Annual Gold Member',
@@ -323,11 +370,12 @@ const translations = {
     all: 'All',
     online: 'Online',
     pending: 'Pending',
-    clear_filters: 'Clear all filters',
+    clear_filters: 'Clear Filters',
+    clear_all_filters: 'Clear all filters',
     member: 'Member',
     join_date: 'Join Date',
     actions: 'Actions',
-    no_results: 'No members found',
+    no_results: 'No results found',
     invite_new: 'Invite New Member',
     invite_desc: 'Send system invitation via email',
     full_name: 'Full Name',
@@ -361,19 +409,11 @@ const translations = {
     disabled: 'Disabled',
     communication: 'Communication',
     newsletter_subscription: 'Newsletter Subscription',
-    newsletter_desc: 'Receive news and promotions via email',
+    newsletter_desc: 'Receive weekly updates and highlights',
     push_notifications: 'Push Notifications',
-    push_desc: 'Real-time notifications on your browser',
-    pwd_update_success: 'Password updated successfully',
-    settings_desc: 'Manage your account settings and security',
-    processing: 'Processing...',
-    are_you_sure: 'Are you sure?',
-    delete_confirm_desc: 'This action cannot be undone. This will permanently delete your account and remove your data from our servers.',
-    yes_delete: 'Yes, Delete Account',
+    push_desc: 'Get instant alerts on your device',
     email_notif: 'Email Notifications',
     email_notif_desc: 'Weekly summaries and updates',
-    push_notif_desc: 'Receive notifications on your device',
-    renew_in: 'Your membership will renew in {days} days',
     activities: 'Recent Activities',
     activities_desc: 'History of all actions in the system',
     search_activities: 'Search activities...',
@@ -393,12 +433,36 @@ const translations = {
     password: 'Password',
     forgot_password: 'Forgot Password?',
     remember_me: 'Remember me for 30 days',
+    login_button: 'Sign In',
     delete_member: 'Delete Member',
     unsuspend: 'Unsuspend',
     generate_random: 'Randomly Add Members',
-    login_button: 'Sign In',
+    google_user_pwd_msg: 'You are signed in with Google. You can manage your password through your Google Account settings.',
+    error_recent_login: 'Please sign out and sign in again to delete your account.',
+    profile_desc_short: 'Personal Info',
+    account: 'Account',
+    community_growing: 'Community is Growing',
+    growth_msg: 'See how member activity and new registrations are impacting our community.',
+    see_full_analytics: 'See Full Analytics',
+    action_required: 'Action Required',
+    manage_now: 'Manage Now',
     no_account: "Don't have an account?",
     register_free: 'Sign up for free',
+    start_journey: 'Start Your Journey',
+    register_desc_hero: 'Sign up to access premium features, build connections, and grow with our professional community.',
+    feat_dashboard: 'Access Personal Dashboard',
+    feat_mgmt: 'Smart Member Management',
+    feat_perks: 'Exclusive Benefits & Perks',
+    feat_realtime: 'Real-time Notifications',
+    register_new: 'Register New Account',
+    create_account_desc: 'Create your account to get started',
+    or_signup_with: 'Or Sign Up With',
+    already_have_account: 'Already have an account?',
+    login_here: 'Login Here',
+    pwd_hint: 'Password must be at least 8 characters long',
+    agree_text: 'I agree to the',
+    and: 'and',
+    sign_up: 'Create Account',
     or_continue: 'Or continue with',
     privacy_policy: 'Privacy Policy',
     terms_service: 'Terms of Service',
@@ -407,6 +471,32 @@ const translations = {
     elevate_desc: 'Access exclusive resources, manage membership benefits, and connect with industry leaders in a structured and efficient environment.',
     active_members: 'Active Members',
     daily_activities: 'Daily Activities',
+    realtime_feed: 'Real-time system feed',
+    end_of_updates: 'End of recent updates',
+    days_ago: '{days} days ago',
+    new_member_registered: 'New Member Registered',
+    subscription_cancelled: 'Subscription Cancelled',
+    payment_failed: 'Payment Failed',
+    system_maintenance: 'System Maintenance',
+    new_admin_added: 'New Admin Added',
+    unspecified_name: 'Unspecified Name',
+    volunteers: 'Volunteers',
+    committee_members: 'Committee Members',
+    event_attendees: 'Event Attendees',
+    other: 'Other',
+    staff: 'Staff',
+    donors: 'Donors',
+    general: 'General',
+    are_you_sure: 'Are you sure?',
+    settings_desc: 'Manage application settings and security',
+    processing: 'Processing...',
+    delete_confirm_desc: 'Are you sure you want to delete your account? This action is irreversible and all your data will be permanently removed.',
+    yes_delete: 'Yes, delete account',
+    pwd_update_success: 'Password updated successfully',
+    push_notif_desc: 'Get instant alerts on your device',
+    general_settings: 'General Settings',
+    member_subscription: 'Member Subscription',
+    member_since_date: 'October 14, 2021',
   }
 };
 
@@ -464,7 +554,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    
+    // Check if member already exists in Firestore for this user
+    if (user.email) {
+      const { query, where, getDocs } = await import('firebase/firestore');
+      const q = query(collection(db, 'members'), where('email', '==', user.email));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        // First time Google login, create member record
+        await addDoc(collection(db, 'members'), {
+          name: user.displayName || 'Google User',
+          email: user.email,
+          role: 'Standard',
+          status: 'Active',
+          joinDate: new Date().toISOString().split('T')[0],
+          avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'GU')}&background=random`,
+          category: 'Other'
+        });
+      }
+    }
   };
 
   const signInWithEmail = async (email: string, pass: string) => {
@@ -472,17 +583,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, pass: string, name: string) => {
+    // Check if member already exists first
+    const { query, where, getDocs } = await import('firebase/firestore');
+    const q = query(collection(db, 'members'), where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      throw new Error('Member with this email already exists in the system.');
+    }
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(userCredential.user, { displayName: name });
     
-    // Also create a member record in Firestore to track status
+    // Create member record
     await addDoc(collection(db, 'members'), {
       name,
       email,
       role: 'Standard',
       status: 'Active',
       joinDate: new Date().toISOString().split('T')[0],
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+      category: 'Other'
     });
   };
 
@@ -503,6 +624,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await setDoc(doc(db, 'members', id), updates, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `members/${id}`);
+    }
+  };
+
+  const updateProfileData = async (updates: { fullName?: string, photoURL?: string, phone?: string }) => {
+    if (!user || !user.email) return;
+
+    try {
+      // 1. Update Firebase Auth Profile
+      const authUpdates: { displayName?: string, photoURL?: string } = {};
+      if (updates.fullName) authUpdates.displayName = updates.fullName;
+      if (updates.photoURL) authUpdates.photoURL = updates.photoURL;
+      
+      if (Object.keys(authUpdates).length > 0) {
+        const { updateProfile } = await import('firebase/auth');
+        await updateProfile(user, authUpdates);
+      }
+
+      // 2. Update Firestore Member Record (if exists)
+      const { query, where, getDocs, updateDoc } = await import('firebase/firestore');
+      const q = query(collection(db, 'members'), where('email', '==', user.email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const memberId = querySnapshot.docs[0].id;
+        const firestoreUpdates: any = {};
+        if (updates.fullName) firestoreUpdates.name = updates.fullName;
+        if (updates.photoURL) firestoreUpdates.avatar = updates.photoURL;
+        if (updates.phone) firestoreUpdates.phone = updates.phone;
+        
+        await updateDoc(doc(db, 'members', memberId), firestoreUpdates);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'profile_sync');
     }
   };
 
@@ -558,6 +712,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       members, 
       addMember, 
       updateMember,
+      updateProfileData,
       deleteMember,
       bulkAddMembers,
       exportMembers,
