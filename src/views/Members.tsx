@@ -35,8 +35,10 @@ export default function Members() {
   useEffect(() => {
     const state = location.state as { filter?: string, openInvite?: boolean };
     if (state?.filter) {
-      if (state.filter === 'Active' || state.filter === 'Pending') {
+      if (state.filter === 'Active' || state.filter === 'Pending' || state.filter === 'Suspended') {
         setStatusFilter(state.filter);
+      } else if (ALL_ROLES.includes(state.filter)) {
+        setRoleFilter(state.filter);
       } else {
         setSearchQuery(state.filter);
       }
@@ -274,7 +276,7 @@ export default function Members() {
             className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
           >
             <UserPlus className="w-5 h-5" />
-            <span>สุ่มเพิ่มสมาชิก</span>
+            <span>{t('generate_random')}</span>
           </button>
           <button 
             onClick={() => { setIsImporting(true); setIsInviting(false); }}
@@ -509,14 +511,14 @@ export default function Members() {
                           : 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
                       }`}
                     >
-                      {selectedMember.status === 'Suspended' ? 'Unsuspend' : t('suspend_member')}
+                      {selectedMember.status === 'Suspended' ? t('unsuspend') : t('suspend_member')}
                     </button>
                   </div>
                   <button 
                     onClick={() => handleDelete(selectedMember.id!)}
                     className="w-full py-3 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
                   >
-                    Delete Member
+                    {t('delete_member')}
                   </button>
                 </div>
               </div>

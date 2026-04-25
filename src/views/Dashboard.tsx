@@ -212,18 +212,23 @@ export default function Dashboard() {
             <h3 className="text-lg text-on-surface mb-6">{t('member_tier')}</h3>
             <div className="space-y-5">
               {tierStats.map((tier) => (
-                <div key={tier.name}>
+                <Link 
+                  key={tier.name} 
+                  to="/members" 
+                  state={{ filter: tier.name }}
+                  className="block group cursor-pointer"
+                >
                   <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-on-surface font-semibold">{tier.name}</span>
+                    <span className="text-on-surface font-semibold group-hover:text-primary transition-colors">{tier.name}</span>
                     <span className="text-on-surface-variant font-bold">{tier.value}%</span>
                   </div>
                   <div className="w-full bg-on-surface/5 h-2 rounded-full overflow-hidden">
                     <div 
-                      className={`${tier.color} h-full rounded-full transition-all duration-1000`} 
+                      className={`${tier.color} h-full rounded-full transition-all duration-1000 group-hover:opacity-80`} 
                       style={{ width: `${tier.value}%` }}
                     />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </motion.div>
