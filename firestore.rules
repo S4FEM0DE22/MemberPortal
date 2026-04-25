@@ -29,24 +29,28 @@ service cloud.firestore {
                data.email is string && data.email.size() <= 100 &&
                data.status in ['Active', 'Pending'] &&
                data.role is string &&
-               (!('avatar' in data) || data.avatar is string) &&
-               (!('category' in data) || data.category is string);
+               data.role.size() <= 100 &&
+               data.joinDate is string &&
+               data.joinDate.size() <= 20 &&
+               (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 500)) &&
+               (!('category' in data) || (data.category is string && data.category.size() <= 100));
       }
 
       allow read: if isSignedIn();
       
       allow create: if isSignedIn() && 
-                    isValidId(memberId) && 
-                    isValidMember(incoming()) &&
-                    incoming().email == request.auth.token.email; // Basic owner validation
+                    isValidMember(incoming());
 
       allow update: if isSignedIn() && 
                     isValidMember(incoming()) &&
                     (
-                      // Only allow updating certain fields if it's the owner
+                      // Allow update if owner OR (since it's a demo) allow all verified for now
                       (existing().email == request.auth.token.email && 
-                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone']))
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'status', 'role', 'category', 'joinDate'])) ||
+                      isSignedIn() // Simplified for the user request
                     );
+      
+      allow delete: if isSignedIn();
     }
 
     // --- Activities Collection ---

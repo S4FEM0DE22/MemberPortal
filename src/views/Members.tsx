@@ -9,6 +9,7 @@ type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
 type SortDirection = 'asc' | 'desc' | null;
 
 const CATEGORIES = ['Volunteers', 'Committee Members', 'Event Attendees', 'Other'];
+const ALL_ROLES = ['Standard', 'Professional', 'Premium', 'Platinum', 'Premium Gold', 'VIP', 'Admin'];
 
 export default function Members() {
   const { t, members, addMember, bulkAddMembers } = useApp();
@@ -100,7 +101,38 @@ export default function Members() {
     return result;
   }, [members, searchQuery, statusFilter, roleFilter, sortConfig]);
 
-  const roles = useMemo(() => ['All', ...Array.from(new Set(members.map(m => m.role)))], [members]);
+  const roles = useMemo(() => ['All', ...ALL_ROLES], []);
+
+  const generateRandomMembers = async () => {
+    const firstNames = ['Somchai', 'Somsak', 'Wichai', 'Anong', 'Kanya', 'John', 'Jane', 'Michael', 'Sarah', 'Preecha'];
+    const lastNames = ['Sae-Lee', 'Smith', 'Doe', 'Vichit', 'Rakthai', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'];
+    const possibleRoles = ALL_ROLES;
+    const categories = ['Volunteers', 'Staff', 'Donors', 'General'];
+
+    const newRandomMembers: Member[] = Array.from({ length: 10 }).map(() => {
+      const fn = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const ln = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const name = `${fn} ${ln}`;
+      return {
+        name,
+        email: `${fn.toLowerCase()}.${ln.toLowerCase()}${Math.floor(Math.random() * 1000)}@example.com`,
+        role: possibleRoles[Math.floor(Math.random() * possibleRoles.length)],
+        category: categories[Math.floor(Math.random() * categories.length)],
+        status: Math.random() > 0.2 ? 'Active' : 'Pending',
+        joinDate: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString().split('T')[0],
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+      };
+    });
+
+    try {
+      await bulkAddMembers(newRandomMembers);
+      setShowImportSuccess(true);
+      setTimeout(() => setShowImportSuccess(false), 3000);
+    } catch (e: any) {
+      setImportError(`Failed to add random members: ${e.message}`);
+      setIsImporting(true); // Show the import modal to display the error
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
@@ -176,7 +208,14 @@ export default function Members() {
           <h1 className="text-3xl text-on-surface font-heading">{t('member_list')}</h1>
           <p className="text-on-surface-variant mt-1">{t('manage_members')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={generateRandomMembers}
+            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
+          >
+            <UserPlus className="w-5 h-5" />
+            <span>สุ่มเพิ่มสมาชิก</span>
+          </button>
           <button 
             onClick={() => { setIsImporting(true); setIsInviting(false); }}
             className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
@@ -193,6 +232,37 @@ export default function Members() {
           </button>
         </div>
       </header>
+
+      {/* Roles Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        {ALL_ROLES.map((role) => {
+          const count = members.filter(m => m.role === role).length;
+          return (
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              key={role}
+              onClick={() => setRoleFilter(role === roleFilter ? 'All' : role)}
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                roleFilter === role 
+                  ? 'bg-primary border-primary shadow-lg shadow-primary/20' 
+                  : 'bg-surface-container border-outline-variant/30 hover:border-primary/50'
+              }`}
+            >
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${
+                roleFilter === role ? 'text-on-primary/80' : 'text-on-surface-variant'
+              }`}>
+                {role}
+              </p>
+              <p className={`text-xl font-bold ${
+                roleFilter === role ? 'text-on-primary' : 'text-on-surface'
+              }`}>
+                {count.toLocaleString()}
+              </p>
+            </motion.button>
+          );
+        })}
+      </div>
 
       {/* Invite Modal */}
       <AnimatePresence>
@@ -255,10 +325,9 @@ export default function Members() {
                     onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
                     className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
                   >
-                    <option value="Standard">Standard</option>
-                    <option value="Professional">Professional</option>
-                    <option value="Platinum">Platinum</option>
-                    <option value="Premium Gold">Premium Gold</option>
+                    {ALL_ROLES.map(role => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
