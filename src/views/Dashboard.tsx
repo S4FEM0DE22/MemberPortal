@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { t, members, user } = useApp();
+  const { t, members, user, exportMembers } = useApp();
   
   const totalMembersCount = members.length;
   const onlineMembersCount = members.filter(m => m.status === 'Active').length;
@@ -19,8 +19,7 @@ export default function Dashboard() {
       value: totalMembersCount.toLocaleString(), 
       change: '+12%', 
       icon: Users, 
-      color: 'primary',
-      filter: 'All'
+      color: 'primary'
     },
     { 
       label: t('online_members'), 
@@ -35,22 +34,31 @@ export default function Dashboard() {
   const tierStats = useMemo(() => {
     if (members.length === 0) return [];
     
-    const tiers = ['Premium Gold', 'Platinum', 'Professional', 'Standard'];
-    const distribution = tiers.map(tier => {
-      const count = members.filter(m => m.role === tier).length;
-      const percentage = (count / members.length) * 100;
-      let color = 'bg-outline-variant/30';
-      let label = t('standard_tier');
+    // Get unique roles from current members or a predefined list
+    const roleCounts = members.reduce((acc: Record<string, number>, m) => {
+      acc[m.role] = (acc[m.role] || 0) + 1;
+      return acc;
+    }, {});
 
-      if (tier === 'Premium Gold') { color = 'bg-primary'; label = t('gold_tier'); }
-      else if (tier === 'Platinum') { color = 'bg-orange-500'; label = t('platinum_tier') || 'Platinum'; }
-      else if (tier === 'Professional') { color = 'bg-emerald-500'; label = t('professional_tier'); }
+    const distribution = Object.entries(roleCounts)
+      .map(([role, count]: [string, number]) => {
+        const percentage = (count / members.length) * 100;
+        
+        // Dynamic colors based on role name hashes or fixed palette
+        let color = 'bg-outline-variant/30';
+        if (role === 'Premium Gold') color = 'bg-primary';
+        else if (role === 'Platinum') color = 'bg-orange-500';
+        else if (role === 'Professional') color = 'bg-emerald-500';
+        else if (role === 'VIP') color = 'bg-purple-500';
+        else if (role === 'Diamond') color = 'bg-blue-400';
+        else if (role === 'Founder') color = 'bg-rose-500';
 
-      return { name: label, value: Math.round(percentage), color };
-    });
+        return { name: role, value: Math.round(percentage), color };
+      })
+      .sort((a, b) => b.value - a.value);
 
-    return distribution.filter(d => d.value > 0);
-  }, [members, t]);
+    return distribution.slice(0, 5); // Show top 5 tiers
+  }, [members]);
 
   const activities = [
     { title: `${t('renewal_payment')}: Sarah Jenkins`, sub: t('annual_gold'), amount: '$249.00', time: `2 ${t('hours_ago')}`, icon: CreditCard, iconBg: 'bg-primary/10', iconColor: 'text-primary' },
@@ -224,6 +232,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
+            onClick={exportMembers}
             className="bg-primary/5 p-6 rounded-[2rem] flex items-center justify-between group cursor-pointer hover:bg-primary/10 transition-colors"
           >
             <div>

@@ -9,13 +9,15 @@ type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
 type SortDirection = 'asc' | 'desc' | null;
 
 const CATEGORIES = ['Volunteers', 'Committee Members', 'Event Attendees', 'Other'];
-const ALL_ROLES = ['Standard', 'Professional', 'Premium', 'Platinum', 'Premium Gold', 'VIP', 'Admin'];
+const ALL_ROLES = ['Standard', 'Silver', 'Gold', 'Professional', 'Premium', 'Platinum', 'Premium Gold', 'Diamond', 'VIP', 'Founder', 'Admin'];
 
 export default function Members() {
-  const { t, members, addMember, bulkAddMembers } = useApp();
+  const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers } = useApp();
   const [isImporting, setIsImporting] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [editForm, setEditForm] = useState<Member | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +66,43 @@ export default function Members() {
     setTimeout(() => setShowImportSuccess(false), 3000);
   };
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm || !editForm.id) return;
+    await updateMember(editForm.id, editForm);
+    setIsEditing(false);
+    setSelectedMember(editForm);
+    setShowImportSuccess(true);
+    setTimeout(() => setShowImportSuccess(false), 3000);
+  };
+
+  const handleSuspend = async (member: Member) => {
+    if (!member.id) return;
+    const newStatus = member.status === 'Suspended' ? 'Active' : 'Suspended';
+    await updateMember(member.id, { status: newStatus });
+    setSelectedMember({ ...member, status: newStatus });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t('are_you_sure'))) return;
+    await deleteMember(id);
+    setSelectedMember(null);
+  };
+
+  const handleExport = () => {
+    if (members.length === 0) return;
+    const csv = Papa.unparse(members);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `members_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -77,7 +116,9 @@ export default function Members() {
   const filteredMembers = useMemo(() => {
     let result = members.filter(m => {
       const q = searchQuery.toLowerCase();
-      const matchesSearch = m.name.toLowerCase().includes(q) || 
+      // If searchQuery is "all", we don't want to filter by it as a string
+      const matchesSearch = q === '' || q === 'all' || 
+                           m.name.toLowerCase().includes(q) || 
                            m.email.toLowerCase().includes(q) || 
                            m.role.toLowerCase().includes(q);
       
@@ -101,7 +142,26 @@ export default function Members() {
     return result;
   }, [members, searchQuery, statusFilter, roleFilter, sortConfig]);
 
-  const roles = useMemo(() => ['All', ...ALL_ROLES], []);
+  const rolesSummary = useMemo(() => {
+    const counts: Record<string, number> = {};
+    members.forEach(m => {
+      counts[m.role] = (counts[m.role] || 0) + 1;
+    });
+    
+    // Ensure all defined roles show up even if 0, plus any others that exist
+    const allKnownRoles = Array.from(new Set([...ALL_ROLES, ...Object.keys(counts)])).sort();
+    
+    return [
+      { role: 'Total', count: members.length, isTotal: true },
+      ...allKnownRoles.map(role => ({
+        role,
+        count: counts[role] || 0,
+        isTotal: false
+      }))
+    ];
+  }, [members, t]);
+
+  const roles = useMemo(() => rolesSummary.map(r => r.isTotal ? 'All' : r.role), [rolesSummary]);
 
   const generateRandomMembers = async () => {
     const firstNames = ['Somchai', 'Somsak', 'Wichai', 'Anong', 'Kanya', 'John', 'Jane', 'Michael', 'Sarah', 'Preecha'];
@@ -224,6 +284,13 @@ export default function Members() {
             {t('import_csv')}
           </button>
           <button 
+            onClick={exportMembers}
+            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            <span>{t('export_report')}</span>
+          </button>
+          <button 
             onClick={() => { setIsInviting(true); setIsImporting(false); }}
             className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-primary/20 active:scale-95"
           >
@@ -234,30 +301,30 @@ export default function Members() {
       </header>
 
       {/* Roles Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {ALL_ROLES.map((role) => {
-          const count = members.filter(m => m.role === role).length;
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+        {rolesSummary.map((item) => {
+          const isSelected = item.isTotal ? roleFilter === 'All' : roleFilter === item.role;
           return (
             <motion.button
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
-              key={role}
-              onClick={() => setRoleFilter(role === roleFilter ? 'All' : role)}
-              className={`p-4 rounded-2xl border text-left transition-all ${
-                roleFilter === role 
+              key={item.role}
+              onClick={() => setRoleFilter(item.isTotal ? 'All' : (item.role === roleFilter ? 'All' : item.role))}
+              className={`p-4 rounded-2xl border text-left transition-all w-full h-full ${
+                isSelected 
                   ? 'bg-primary border-primary shadow-lg shadow-primary/20' 
                   : 'bg-surface-container border-outline-variant/30 hover:border-primary/50'
               }`}
             >
               <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${
-                roleFilter === role ? 'text-on-primary/80' : 'text-on-surface-variant'
+                isSelected ? 'text-on-primary/80' : 'text-on-surface-variant'
               }`}>
-                {role}
+                {item.isTotal ? t('total_members') : item.role}
               </p>
               <p className={`text-xl font-bold ${
-                roleFilter === role ? 'text-on-primary' : 'text-on-surface'
+                isSelected ? 'text-on-primary' : 'text-on-surface'
               }`}>
-                {count.toLocaleString()}
+                {item.count.toLocaleString()}
               </p>
             </motion.button>
           );
@@ -426,15 +493,129 @@ export default function Members() {
                   </div>
                 </div>
 
-                <div className="w-full mt-6 flex gap-4">
-                  <button className="flex-1 py-3 border border-outline-variant rounded-xl text-sm font-bold text-on-surface hover:bg-on-surface/5 transition-all">
-                    {t('edit_info')}
-                  </button>
-                  <button className="flex-1 py-3 bg-red-500/10 text-red-500 rounded-xl text-sm font-bold hover:bg-red-500/20 transition-all">
-                    {t('suspend_member')}
+                <div className="w-full mt-6 flex flex-col gap-3">
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => { setEditForm(selectedMember); setIsEditing(true); }}
+                      className="flex-1 py-3 border border-outline-variant rounded-xl text-sm font-bold text-on-surface hover:bg-on-surface/5 transition-all"
+                    >
+                      {t('edit_info')}
+                    </button>
+                    <button 
+                      onClick={() => handleSuspend(selectedMember)}
+                      className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+                        selectedMember.status === 'Suspended' 
+                          ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                          : 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
+                      }`}
+                    >
+                      {selectedMember.status === 'Suspended' ? 'Unsuspend' : t('suspend_member')}
+                    </button>
+                  </div>
+                  <button 
+                    onClick={() => handleDelete(selectedMember.id!)}
+                    className="w-full py-3 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                  >
+                    Delete Member
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {isEditing && editForm && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditing(false)}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-outline-variant/30"
+            >
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="absolute right-6 top-6 p-2 hover:bg-on-surface/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-outline" />
+              </button>
+
+              <div className="text-center mb-8">
+                <h2 className="text-2xl text-on-surface font-heading">{t('edit_info')}</h2>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('full_name')}</label>
+                  <input 
+                    required
+                    value={editForm.name}
+                    onChange={e => setEditForm(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('email')}</label>
+                  <input 
+                    required
+                    type="email"
+                    value={editForm.email}
+                    onChange={e => setEditForm(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('member_tier')}</label>
+                    <select 
+                      value={editForm.role}
+                      onChange={e => setEditForm(prev => prev ? ({ ...prev, role: e.target.value }) : null)}
+                      className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all"
+                    >
+                      {ALL_ROLES.map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('category')}</label>
+                    <select 
+                      value={editForm.category}
+                      onChange={e => setEditForm(prev => prev ? ({ ...prev, category: e.target.value }) : null)}
+                      className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all"
+                    >
+                      {CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="pt-4 flex gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 py-3 bg-on-surface/5 text-on-surface font-bold rounded-xl hover:bg-on-surface/10 transition-colors"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-primary text-on-primary font-bold rounded-xl hover:bg-primary-container transition-colors shadow-lg shadow-primary/20"
+                  >
+                    {t('save_changes')}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

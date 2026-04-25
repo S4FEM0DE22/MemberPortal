@@ -25,31 +25,25 @@ service cloud.firestore {
     // --- Members Collection ---
     match /members/{memberId} {
       function isValidMember(data) {
-        return data.name is string && data.name.size() <= 100 &&
+        return data.keys().hasAll(['name', 'email', 'status', 'role', 'joinDate', 'avatar', 'category']) &&
+               data.name is string && data.name.size() <= 100 &&
                data.email is string && data.email.size() <= 100 &&
-               data.status in ['Active', 'Pending'] &&
-               data.role is string &&
-               data.role.size() <= 100 &&
-               data.joinDate is string &&
-               data.joinDate.size() <= 20 &&
-               (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 500)) &&
-               (!('category' in data) || (data.category is string && data.category.size() <= 100));
+               data.status in ['Active', 'Pending', 'Suspended'] &&
+               data.role is string && data.role.size() <= 100 &&
+               data.joinDate is string && data.joinDate.size() <= 20 &&
+               data.avatar is string && data.avatar.size() <= 1000 &&
+               data.category is string && data.category.size() <= 100 &&
+               (!('phone' in data) || (data.phone is string && data.phone.size() <= 20));
       }
 
       allow read: if isSignedIn();
       
-      allow create: if isSignedIn() && 
-                    isValidMember(incoming());
+      allow create: if isSignedIn() && isValidMember(incoming());
 
       allow update: if isSignedIn() && 
-                    isValidMember(incoming()) &&
-                    (
-                      // Allow update if owner OR (since it's a demo) allow all verified for now
-                      (existing().email == request.auth.token.email && 
-                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'status', 'role', 'category', 'joinDate'])) ||
-                      isSignedIn() // Simplified for the user request
-                    );
-      
+                    isValidMember(incoming()) && 
+                    incoming().email == existing().email; // Preserve identity
+
       allow delete: if isSignedIn();
     }
 

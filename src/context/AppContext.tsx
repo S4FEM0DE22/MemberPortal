@@ -32,6 +32,43 @@ testConnection();
 type Theme = 'light' | 'dark';
 type Language = 'th' | 'en';
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export interface Member {
   id?: string;
   name: string;
@@ -41,6 +78,7 @@ export interface Member {
   joinDate: string;
   avatar: string;
   category: string;
+  phone?: string;
 }
 
 interface AppContextType {
@@ -51,7 +89,10 @@ interface AppContextType {
   t: (key: string) => string;
   members: Member[];
   addMember: (member: Member) => Promise<void>;
+  updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
   bulkAddMembers: (members: Member[]) => Promise<void>;
+  exportMembers: () => Promise<void>;
   user: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
@@ -446,17 +487,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await addDoc(collection(db, 'members'), member);
     } catch (error) {
-      console.error("Error adding member: ", error);
+      handleFirestoreError(error, OperationType.CREATE, 'members');
+    }
+  };
+
+  const updateMember = async (id: string, updates: Partial<Member>) => {
+    try {
+      await setDoc(doc(db, 'members', id), updates, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `members/${id}`);
+    }
+  };
+
+  const deleteMember = async (id: string) => {
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'members', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `members/${id}`);
     }
   };
 
   const bulkAddMembers = async (newMembers: Member[]) => {
     try {
-      const batch = newMembers.map(m => addMember(m));
-      await Promise.all(batch);
+      const { writeBatch } = await import('firebase/firestore');
+      const batch = writeBatch(db);
+      newMembers.forEach(m => {
+        const newDocRef = doc(collection(db, 'members'));
+        batch.set(newDocRef, m);
+      });
+      await batch.commit();
     } catch (error) {
-      console.error("Error in bulk addition: ", error);
+      handleFirestoreError(error, OperationType.WRITE, 'members (bulk)');
     }
+  };
+
+  const exportMembers = async () => {
+    if (members.length === 0) return;
+    const Papa = await import('papaparse');
+    const csv = Papa.default.unparse(members);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `members_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const t = (key: string) => {
@@ -472,7 +550,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       t, 
       members, 
       addMember, 
+      updateMember,
+      deleteMember,
       bulkAddMembers,
+      exportMembers,
       user,
       loading,
       signIn,
