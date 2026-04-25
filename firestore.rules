@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Members Collection ---
+    match /members/{memberId} {
+      function isValidMember(data) {
+        return data.name is string && data.name.size() <= 100 &&
+               data.email is string && data.email.size() <= 100 &&
+               data.status in ['Active', 'Pending'] &&
+               data.role is string &&
+               (!('avatar' in data) || data.avatar is string) &&
+               (!('category' in data) || data.category is string);
+      }
+
+      allow read: if isSignedIn();
+      
+      allow create: if isSignedIn() && 
+                    isValidId(memberId) && 
+                    isValidMember(incoming()) &&
+                    incoming().email == request.auth.token.email; // Basic owner validation
+
+      allow update: if isSignedIn() && 
+                    isValidMember(incoming()) &&
+                    (
+                      // Only allow updating certain fields if it's the owner
+                      (existing().email == request.auth.token.email && 
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone']))
+                    );
+    }
+
+    // --- Activities Collection ---
+    match /activities/{activityId} {
+      function isValidActivity(data) {
+        return data.title is string && data.title.size() <= 200 &&
+               data.description is string && data.description.size() <= 1000 &&
+               data.reference is string && data.reference.size() <= 50;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidActivity(incoming());
+    }
+  }
+}

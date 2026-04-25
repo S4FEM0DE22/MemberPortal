@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -8,7 +9,16 @@ interface NavbarProps {
 
 export default function Navbar({ onToggleMenu }: NavbarProps) {
   const location = useLocation();
-  const { theme, toggleTheme, t } = useApp();
+  const { theme, toggleTheme, t, logout } = useApp();
+
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout Error: ", error);
+    }
+  };
 
   const navItems = [
     { name: t('home'), path: '/' },
@@ -55,13 +65,13 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
           {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </button>
 
-        <Link 
-          to="/login"
+        <button 
+          onClick={handleLogout}
           className="flex items-center gap-2 text-on-surface-variant hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg border border-transparent hover:border-red-100/20"
         >
           <LogOut className="w-5 h-5" />
           <span className="text-sm font-semibold hidden sm:inline">{t('logout')}</span>
-        </Link>
+        </button>
         <Link 
           to="/profile"
           className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-outline-variant hover:ring-2 hover:ring-primary/20 transition-all"

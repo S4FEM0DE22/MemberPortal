@@ -1,14 +1,56 @@
+import React, { useMemo } from 'react';
 import { Users, TrendingUp, UserPlus, CreditCard, BadgeCheck, FileEdit, ArrowRight, MessageSquarePlus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { t } = useApp();
+  const { t, members, user } = useApp();
   
+  const totalMembersCount = members.length;
+  const onlineMembersCount = members.filter(m => m.status === 'Active').length;
+  const pendingMembersCount = members.filter(m => m.status === 'Pending').length;
+
+  const displayName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
+
   const stats = [
-    { label: t('total_members'), value: '2,548', change: '+12%', icon: Users, color: 'primary' },
-    { label: t('active_subscriptions'), value: '1,892', change: '+5.2%', icon: TrendingUp, color: 'orange' },
+    { 
+      label: t('total_members'), 
+      value: totalMembersCount.toLocaleString(), 
+      change: '+12%', 
+      icon: Users, 
+      color: 'primary',
+      filter: 'All'
+    },
+    { 
+      label: t('online_members'), 
+      value: onlineMembersCount.toLocaleString(), 
+      change: '+5.2%', 
+      icon: TrendingUp, 
+      color: 'emerald',
+      filter: 'Active'
+    },
   ];
+
+  const tierStats = useMemo(() => {
+    if (members.length === 0) return [];
+    
+    const tiers = ['Premium Gold', 'Platinum', 'Professional', 'Standard'];
+    const distribution = tiers.map(tier => {
+      const count = members.filter(m => m.role === tier).length;
+      const percentage = (count / members.length) * 100;
+      let color = 'bg-outline-variant/30';
+      let label = t('standard_tier');
+
+      if (tier === 'Premium Gold') { color = 'bg-primary'; label = t('gold_tier'); }
+      else if (tier === 'Platinum') { color = 'bg-orange-500'; label = t('platinum_tier') || 'Platinum'; }
+      else if (tier === 'Professional') { color = 'bg-emerald-500'; label = t('professional_tier'); }
+
+      return { name: label, value: Math.round(percentage), color };
+    });
+
+    return distribution.filter(d => d.value > 0);
+  }, [members, t]);
 
   const activities = [
     { title: `${t('renewal_payment')}: Sarah Jenkins`, sub: t('annual_gold'), amount: '$249.00', time: `2 ${t('hours_ago')}`, icon: CreditCard, iconBg: 'bg-primary/10', iconColor: 'text-primary' },
@@ -25,17 +67,21 @@ export default function Dashboard() {
           animate={{ opacity: 1, x: 0 }}
         >
           <p className="text-primary text-sm font-bold mb-1">{t('dashboard')}</p>
-          <h1 className="text-3xl text-on-surface">{t('welcome')}, Alex</h1>
+          <h1 className="text-3xl text-on-surface">{t('welcome')}, {displayName}</h1>
           <p className="text-on-surface-variant mt-1">{t('today_happening')}</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <button className="bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-xl font-semibold transition-all shadow-sm flex items-center gap-2">
+          <Link 
+            to="/members"
+            state={{ openInvite: true }}
+            className="bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-xl font-semibold transition-all shadow-sm flex items-center gap-2"
+          >
             <UserPlus className="w-4 h-4" />
             {t('new_member')}
-          </button>
+          </Link>
         </motion.div>
       </section>
 
@@ -43,26 +89,33 @@ export default function Dashboard() {
       <section className="grid grid-cols-1 md:grid-cols-6 gap-6">
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
+          const targetPath = stat.color === 'primary' ? '/members' : '/activities';
           return (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className="md:col-span-2 bg-surface-container p-6 rounded-[2rem] border border-outline-variant/30 shadow-sm flex flex-col justify-between"
+              className="md:col-span-2 shadow-sm"
             >
-              <div className="flex justify-between items-start">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${stat.color === 'primary' ? 'bg-primary/10 text-primary' : 'bg-orange-500/10 text-orange-500'}`}>
-                  <Icon className="w-7 h-7" />
+              <Link 
+                to="/members"
+                state={{ filter: stat.filter }}
+                className="block h-full bg-surface-container p-6 rounded-[2rem] hover:bg-on-surface/5 transition-all active:scale-95 flex flex-col justify-between"
+              >
+                <div className="flex justify-between items-start">
+                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${stat.color === 'primary' ? 'bg-primary/10 text-primary' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                    <Icon className="w-7 h-7" />
+                  </div>
+                  <span className="text-emerald-500 text-xs font-bold flex items-center bg-emerald-500/10 px-2 py-1 rounded-full">
+                    {stat.change}
+                  </span>
                 </div>
-                <span className="text-emerald-500 text-xs font-bold flex items-center bg-emerald-500/10 px-2 py-1 rounded-full">
-                  {stat.change}
-                </span>
-              </div>
-              <div className="mt-6">
-                <p className="text-on-surface-variant text-xs font-semibold mb-1">{stat.label}</p>
-                <h3 className="text-2xl text-on-surface">{stat.value}</h3>
-              </div>
+                <div className="mt-6">
+                  <p className="text-on-surface-variant text-xs font-semibold mb-1">{stat.label}</p>
+                  <h3 className="text-2xl text-on-surface">{stat.value}</h3>
+                </div>
+              </Link>
             </motion.div>
           );
         })}
@@ -72,20 +125,26 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="md:col-span-2 bg-primary text-on-primary p-6 rounded-[2rem] shadow-lg shadow-primary/20 flex flex-col justify-between"
+          className="md:col-span-2 shadow-lg shadow-primary/20"
         >
-          <div className="flex justify-between items-start">
-            <div className="h-12 w-12 bg-on-primary/20 text-on-primary rounded-xl flex items-center justify-center">
-              <UserPlus className="w-7 h-7" />
+          <Link 
+            to="/members"
+            state={{ filter: 'Pending' }}
+            className="block h-full bg-primary text-on-primary p-6 rounded-[2rem] hover:opacity-90 transition-all active:scale-95 flex flex-col justify-between"
+          >
+            <div className="flex justify-between items-start">
+              <div className="h-12 w-12 bg-on-primary/20 text-on-primary rounded-xl flex items-center justify-center">
+                <UserPlus className="w-7 h-7" />
+              </div>
             </div>
-          </div>
-          <div className="mt-6">
-            <p className="text-on-primary/80 text-xs font-semibold mb-1">{t('pending_approval')}</p>
-            <div className="flex items-center gap-4">
-              <h3 className="text-2xl font-bold">42</h3>
-              <span className="px-2 py-0.5 bg-on-primary text-primary text-[10px] font-bold rounded-full uppercase">{t('must_action')}</span>
+            <div className="mt-6">
+              <p className="text-on-primary/80 text-xs font-semibold mb-1">{t('pending_approval')}</p>
+              <div className="flex items-center gap-4">
+                <h3 className="text-2xl font-bold">{pendingMembersCount}</h3>
+                <span className="px-2 py-0.5 bg-on-primary text-primary text-[10px] font-bold rounded-full uppercase">{t('must_action')}</span>
+              </div>
             </div>
-          </div>
+          </Link>
         </motion.div>
       </section>
 
@@ -96,22 +155,31 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 bg-surface-container rounded-[2rem] border border-outline-variant/30 shadow-sm overflow-hidden"
+          className="lg:col-span-2 bg-surface-container rounded-[2rem] shadow-sm overflow-hidden"
         >
           <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between">
-            <h3 className="text-lg text-on-surface">{t('recent_activity')}</h3>
-            <button className="text-primary text-xs font-bold hover:underline">{t('view_all')}</button>
+            <h3 className="text-lg text-on-surface font-heading uppercase tracking-tight">{t('recent_activity')}</h3>
+            <Link 
+              to="/activities" 
+              className="text-primary text-[10px] font-black uppercase tracking-widest hover:underline bg-primary/5 px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+            >
+              {t('view_all')}
+            </Link>
           </div>
           <div className="divide-y divide-outline-variant/10">
             {activities.map((act, idx) => {
               const Icon = act.icon;
               return (
-                <div key={idx} className="px-6 py-5 flex items-center gap-4 hover:bg-on-surface/5 transition-colors">
-                  <div className={`h-10 w-10 rounded-full ${act.iconBg} flex items-center justify-center`}>
+                <Link 
+                  key={idx} 
+                  to="/activities"
+                  className="px-6 py-5 flex items-center gap-4 hover:bg-on-surface/5 transition-colors group cursor-pointer"
+                >
+                  <div className={`h-10 w-10 rounded-full ${act.iconBg} flex items-center justify-center transition-transform group-hover:scale-110`}>
                     <Icon className={`${act.iconColor} w-5 h-5`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-on-surface truncate">{act.title}</p>
+                    <p className="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">{act.title}</p>
                     <p className="text-xs text-on-surface-variant font-medium">{act.sub}</p>
                   </div>
                   <div className="text-right">
@@ -119,7 +187,7 @@ export default function Dashboard() {
                     {act.status && <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold rounded uppercase">{act.status}</span>}
                     <p className="text-[10px] text-on-surface-variant mt-0.5 font-medium">{act.time}</p>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -131,15 +199,11 @@ export default function Dashboard() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-surface-container p-6 rounded-[2rem] border border-outline-variant/30 shadow-sm"
+            className="bg-surface-container p-6 rounded-[2rem] shadow-sm"
           >
             <h3 className="text-lg text-on-surface mb-6">{t('member_tier')}</h3>
             <div className="space-y-5">
-              {[
-                { name: t('gold_tier'), value: 45, color: 'bg-primary' },
-                { name: t('silver_tier'), value: 32, color: 'bg-orange-500' },
-                { name: t('standard_tier'), value: 23, color: 'bg-outline-variant/50' },
-              ].map((tier) => (
+              {tierStats.map((tier) => (
                 <div key={tier.name}>
                   <div className="flex justify-between text-xs mb-1.5">
                     <span className="text-on-surface font-semibold">{tier.name}</span>
@@ -160,7 +224,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-primary/5 p-6 rounded-[2rem] flex items-center justify-between group cursor-pointer hover:bg-primary/10 transition-colors border border-primary/10"
+            className="bg-primary/5 p-6 rounded-[2rem] flex items-center justify-between group cursor-pointer hover:bg-primary/10 transition-colors"
           >
             <div>
               <p className="text-on-surface font-bold text-lg">{t('export_report')}</p>

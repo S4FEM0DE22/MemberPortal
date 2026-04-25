@@ -10,7 +10,16 @@ interface MobileDrawerProps {
 
 export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
   const location = useLocation();
-  const { theme, toggleTheme, t } = useApp();
+  const { theme, toggleTheme, t, logout } = useApp();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onClose();
+    } catch (error) {
+      console.error("Logout Error: ", error);
+    }
+  };
 
   const navItems = [
     { name: t('home'), path: '/', icon: LayoutDashboard },
@@ -87,14 +96,13 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
                 </div>
               </button>
 
-              <Link 
-                to="/login"
-                onClick={onClose}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl text-red-600 hover:bg-red-500/10 transition-all font-semibold"
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-4 px-4 py-3 rounded-xl text-red-600 hover:bg-red-500/10 transition-all font-semibold w-full text-left"
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-heading">{t('logout')}</span>
-              </Link>
+              </button>
             </div>
           </motion.div>
         </>

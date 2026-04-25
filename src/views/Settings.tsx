@@ -1,30 +1,63 @@
-import { useState } from 'react';
-import { Sliders, Shield, AlertTriangle, Info, Calendar } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { Sliders, Shield, AlertTriangle, Info, Calendar, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const { theme, toggleTheme, language, setLanguage, t } = useApp();
   const [pushNotif, setPushNotif] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [showPwdSuccess, setShowPwdSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  const handlePasswordUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingPassword(true);
+    setTimeout(() => {
+      setIsUpdatingPassword(false);
+      setShowPwdSuccess(true);
+      setTimeout(() => setShowPwdSuccess(false), 3000);
+    }, 1500);
+  };
+
+  const handleDeleteAccount = () => {
+    // Simulate account deletion and logout
+    navigate('/login');
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12">
+    <div className="max-w-4xl mx-auto space-y-12 pb-20">
+      <AnimatePresence>
+        {showPwdSuccess && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            {t('pwd_update_success')}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <header>
-        <h1 className="text-4xl text-on-surface">{t('settings')}</h1>
-        <p className="text-on-surface-variant mt-2">จัดการการตั้งค่าบัญชีและความปลอดภัยของคุณ</p>
+        <h1 className="text-4xl text-on-surface font-heading">{t('settings')}</h1>
+        <p className="text-on-surface-variant mt-2">{t('settings_desc')}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Preferences Section View */}
+        {/* Preferences Section */}
         <section className="lg:col-span-8 space-y-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-surface-container border border-outline-variant rounded-2xl p-8 shadow-sm"
           >
-            <h3 className="text-xl text-on-surface mb-8 flex items-center gap-3">
+            <h3 className="text-xl text-on-surface mb-8 flex items-center gap-3 font-heading">
               <Sliders className="text-primary w-6 h-6" />
               {t('appearance')}
             </h3>
@@ -53,7 +86,7 @@ export default function Settings() {
                 <select 
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as any)}
-                  className="px-4 py-2 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:border-primary focus:ring-primary w-full sm:w-48 outline-none"
+                  className="px-4 py-2 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:border-primary focus:ring-primary w-full sm:w-48 outline-none transition-all"
                 >
                   <option value="en">English (US)</option>
                   <option value="th">ไทย</option>
@@ -64,8 +97,8 @@ export default function Settings() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-on-surface">การแจ้งเตือนแบบพุช</p>
-                    <p className="text-xs text-on-surface-variant">รับการแจ้งเตือนบนอุปกรณ์ของคุณ</p>
+                    <p className="text-sm font-bold text-on-surface">{t('push_notifications')}</p>
+                    <p className="text-xs text-on-surface-variant">{t('push_notif_desc')}</p>
                   </div>
                   <button 
                     onClick={() => setPushNotif(!pushNotif)}
@@ -76,8 +109,8 @@ export default function Settings() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-on-surface">การแจ้งเตือนทางอีเมล</p>
-                    <p className="text-xs text-on-surface-variant">สรุปและอัปเดตรายสัปดาห์</p>
+                    <p className="text-sm font-bold text-on-surface">{t('email_notif')}</p>
+                    <p className="text-xs text-on-surface-variant">{t('email_notif_desc')}</p>
                   </div>
                   <button 
                     onClick={() => setEmailNotif(!emailNotif)}
@@ -90,42 +123,66 @@ export default function Settings() {
             </div>
           </motion.div>
 
-          {/* Security Update Card */}
+          {/* Security Card */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="bg-surface-container border border-outline-variant rounded-2xl p-8 shadow-sm"
           >
-            <h3 className="text-xl text-on-surface mb-8 flex items-center gap-3">
+            <h3 className="text-xl text-on-surface mb-8 flex items-center gap-3 font-heading">
               <Shield className="text-primary w-6 h-6" />
-              ความปลอดภัย
+              {t('security')}
             </h3>
-            <form className="space-y-6">
+            <form onSubmit={handlePasswordUpdate} className="space-y-6">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-outline uppercase tracking-widest block ml-1">รหัสผ่านปัจจุบัน</label>
-                <input className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="••••••••" type="password" />
+                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('current_password')}</label>
+                <input 
+                  className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                  placeholder="••••••••" 
+                  type="password" 
+                  required 
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest block ml-1">รหัสผ่านใหม่</label>
-                  <input className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="รหัสผ่านใหม่" type="password" />
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('new_password')}</label>
+                  <input 
+                    className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                    placeholder={t('new_password')} 
+                    type="password" 
+                    required 
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest block ml-1">ยืนยันรหัสผ่านใหม่</label>
-                  <input className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="ยืนยันรหัสผ่าน" type="password" />
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('confirm_new_password')}</label>
+                  <input 
+                    className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                    placeholder={t('confirm_new_password')} 
+                    type="password" 
+                    required 
+                  />
                 </div>
               </div>
               <div className="pt-4">
-                <button className="bg-primary hover:bg-primary-container text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all shadow-sm shadow-primary/20" type="submit">
-                  อัปเดตรหัสผ่าน
+                <button 
+                  className="bg-primary hover:bg-primary-container text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-70 flex items-center gap-2 uppercase tracking-wider" 
+                  type="submit"
+                  disabled={isUpdatingPassword}
+                >
+                  {isUpdatingPassword && (
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                      <Sliders className="w-4 h-4" />
+                    </motion.div>
+                  )}
+                  {isUpdatingPassword ? t('processing') : t('update_password')}
                 </button>
               </div>
             </form>
           </motion.div>
         </section>
 
-        {/* Danger Zone Aside Panel */}
+        {/* Danger Zone Aside */}
         <section className="lg:col-span-4">
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
@@ -133,18 +190,18 @@ export default function Settings() {
             transition={{ delay: 0.2 }}
             className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 sticky top-24"
           >
-            <h3 className="text-xl text-red-600 dark:text-red-400 mb-4 flex items-center gap-3">
+            <h3 className="text-xl text-red-600 dark:text-red-400 mb-4 flex items-center gap-3 font-heading">
               <AlertTriangle className="w-6 h-6" />
-              โซนอันตราย
+              {t('danger_zone')}
             </h3>
             <p className="text-sm text-on-surface-variant mb-8 leading-relaxed">
-              เมื่อคุณลบบัญชีแล้ว จะไม่สามารถย้อนกลับได้ โปรดแน่ใจก่อนดำเนินการ
+              {t('delete_account_desc')}
             </p>
             <button 
               onClick={() => setShowDeleteModal(true)}
-              className="w-full py-3 px-6 border-2 border-red-600 dark:border-red-400 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-600 hover:text-white dark:hover:bg-red-400 dark:hover:text-black transition-all active:scale-95"
+              className="w-full py-3 px-6 border-2 border-red-600 dark:border-red-400 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-600 hover:text-white dark:hover:bg-red-400 dark:hover:text-black transition-all active:scale-95 outline-none focus:ring-2 focus:ring-red-500 uppercase tracking-widest text-xs"
             >
-              ลบบัญชี
+              {t('delete_account')}
             </button>
 
             {/* Account Meta Stats */}
@@ -154,8 +211,8 @@ export default function Settings() {
                   <Info className="text-on-surface-variant w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">ระดับสมาชิก</p>
-                  <p className="text-sm font-bold text-on-surface">Premium Gold</p>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('member_tier')}</p>
+                  <p className="text-sm font-bold text-on-surface">{t('platinum_tier')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -163,7 +220,7 @@ export default function Settings() {
                   <Calendar className="text-on-surface-variant w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">เป็นสมาชิกตั้งแต่</p>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('member_since')}</p>
                   <p className="text-sm font-bold text-on-surface">ตุลาคม 2022</p>
                 </div>
               </div>
@@ -173,34 +230,47 @@ export default function Settings() {
       </div>
 
       {/* Delete Confirmation Modal Overlay */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-[100] bg-on-surface/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-surface-container border border-outline-variant/30 rounded-[2rem] max-w-md w-full shadow-2xl p-8"
-          >
-            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-              <AlertTriangle className="text-red-500 w-8 h-8" />
-            </div>
-            <h2 className="text-2xl text-on-surface mb-4">คุณแน่ใจหรือไม่?</h2>
-            <p className="text-on-surface-variant mb-8">
-              การดำเนินการนี้ไม่สามารถย้อนกลับได้ ซึ่งจะลบบัญชีของคุณอย่างถาวรและนำข้อมูลของคุณออกจากเซิร์ฟเวอร์ของเรา
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button 
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-3 rounded-xl font-bold bg-on-surface/5 text-on-surface hover:bg-on-surface/10 transition-colors"
-              >
-                ยกเลิก
-              </button>
-              <button className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors">
-                ใช่ ลบบัญชี
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteModal(false)}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-surface-container border border-outline-variant/30 rounded-[2rem] max-w-md w-full shadow-2xl p-8 z-10"
+            >
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+                <AlertTriangle className="text-red-500 w-8 h-8" />
+              </div>
+              <h2 className="text-2xl text-on-surface mb-4 font_heading">{t('are_you_sure')}</h2>
+              <p className="text-on-surface-variant mb-8 leading-relaxed">
+                {t('delete_confirm_desc')}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-3 rounded-xl font-bold bg-on-surface/5 text-on-surface hover:bg-on-surface/10 transition-colors active:scale-95"
+                >
+                  {t('cancel')}
+                </button>
+                <button 
+                  onClick={handleDeleteAccount}
+                  className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 active:scale-95"
+                >
+                  {t('yes_delete')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -2,14 +2,39 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, BadgeCheck } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useApp } from '../context/AppContext';
 
 export default function Login() {
+  const { t, signIn, signInWithEmail } = useApp();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/');
+    setIsLoading(true);
+    setError('');
+    try {
+      await signInWithEmail(email, password);
+      navigate('/');
+    } catch (err: any) {
+      console.error("Login Error: ", err);
+      setError(err.message || 'Failed to sign in');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signIn();
+      navigate('/');
+    } catch (error) {
+      console.error("Login Error: ", error);
+    }
   };
 
   return (
@@ -34,19 +59,19 @@ export default function Login() {
             <BadgeCheck className="w-12 h-12 fill-white text-primary" />
             <h1 className="font-heading text-4xl font-extrabold tracking-tight">MemberPortal</h1>
           </div>
-          <h2 className="font-heading text-3xl font-semibold mb-4 text-white">ยกระดับเครือข่ายมืออาชีพของคุณ</h2>
+          <h2 className="font-heading text-3xl font-semibold mb-4 text-white">{t('elevate_network')}</h2>
           <p className="text-lg opacity-90 leading-relaxed mb-8">
-            เข้าถึงแหล่งข้อมูลพิเศษ จัดการสิทธิประโยชน์การเป็นสมาชิก และเชื่อมต่อกับผู้นำในอุตสาหกรรมในสภาพแวดล้อมที่เป็นระบบและมีประสิทธิภาพ
+            {t('elevate_desc')}
           </p>
           <div className="flex gap-8">
             <div className="flex flex-col gap-1">
               <span className="font-heading text-2xl font-bold">10k+</span>
-              <span className="text-xs uppercase tracking-wider opacity-80">สมาชิกที่ใช้งานอยู่</span>
+              <span className="text-xs uppercase tracking-wider opacity-80">{t('active_members')}</span>
             </div>
             <div className="w-px h-12 bg-white/20"></div>
             <div className="flex flex-col gap-1">
               <span className="font-heading text-2xl font-bold">500+</span>
-              <span className="text-xs uppercase tracking-wider opacity-80">กิจกรรมรายวัน</span>
+              <span className="text-xs uppercase tracking-wider opacity-80">{t('daily_activities')}</span>
             </div>
           </div>
         </motion.div>
@@ -70,13 +95,18 @@ export default function Login() {
 
           <div className="bg-surface-container border border-outline-variant p-8 md:p-10 rounded-2xl shadow-sm">
             <header className="mb-8">
-              <h2 className="font-heading text-2xl font-bold mb-1 text-on-surface">ยินดีต้อนรับกลับมา</h2>
-              <p className="text-sm text-on-surface-variant">กรุณากรอกรายละเอียดเพื่อเข้าสู่ระบบ</p>
+              <h2 className="font-heading text-2xl font-bold mb-1 text-on-surface">{t('welcome_back')}</h2>
+              <p className="text-sm text-on-surface-variant">{t('login_desc')}</p>
             </header>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              {error && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold">
+                  {error}
+                </div>
+              )}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="email">อีเมล</label>
+                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="email">{t('email')}</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
                   <input
@@ -86,14 +116,16 @@ export default function Login() {
                     placeholder="name@company.com"
                     required
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-sm font-semibold text-on-surface-variant" htmlFor="password">รหัสผ่าน</label>
-                  <Link to="#" className="text-xs font-semibold text-primary hover:underline">ลืมรหัสผ่าน?</Link>
+                  <label className="text-sm font-semibold text-on-surface-variant" htmlFor="password">{t('password')}</label>
+                  <Link to="#" className="text-xs font-semibold text-primary hover:underline">{t('forgot_password')}</Link>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
@@ -104,6 +136,8 @@ export default function Login() {
                     placeholder="••••••••"
                     required
                     type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                   <button 
                     type="button"
@@ -123,32 +157,36 @@ export default function Login() {
                   type="checkbox"
                 />
                 <label className="text-sm text-on-surface-variant cursor-pointer group-hover:text-on-surface transition-colors" htmlFor="remember">
-                  จดจำฉันไว้ 30 วัน
+                  {t('remember_me')}
                 </label>
               </div>
 
               <button 
-                className="group relative flex items-center justify-center w-full bg-primary text-on-primary py-3.5 rounded-xl font-semibold hover:bg-primary-container active:scale-[0.98] transition-all shadow-md shadow-primary/10"
+                className="group relative flex items-center justify-center w-full bg-primary text-on-primary py-3.5 rounded-xl font-semibold hover:bg-primary-container active:scale-[0.98] transition-all shadow-md shadow-primary/10 disabled:opacity-70"
                 type="submit"
+                disabled={isLoading}
               >
-                <span>เข้าสู่ระบบ</span>
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <span>{isLoading ? t('processing') : t('login_button')}</span>
+                {!isLoading && <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
 
             <div className="mt-8 pt-6 border-t border-outline-variant flex flex-col items-center gap-6">
               <p className="text-sm text-on-surface-variant">
-                ยังไม่มีบัญชีใช่ไหม? <Link to="/register" className="text-primary font-bold hover:underline">สมัครสมาชิกฟรี</Link>
+                {t('no_account')} <Link to="/register" className="text-primary font-bold hover:underline">{t('register_free')}</Link>
               </p>
 
               <div className="flex items-center gap-4 w-full">
                 <div className="h-px flex-1 bg-outline-variant/30"></div>
-                <span className="text-[10px] font-bold text-outline uppercase tracking-widest">หรือดำเนินการต่อด้วย</span>
+                <span className="text-[10px] font-bold text-outline uppercase tracking-widest">{t('or_continue')}</span>
                 <div className="h-px flex-1 bg-outline-variant/30"></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 w-full">
-                <button className="flex items-center justify-center gap-2 px-4 py-2.5 border border-outline-variant rounded-xl text-sm font-semibold hover:bg-on-surface/5 transition-colors text-on-surface">
+                <button 
+                  onClick={handleGoogleSignIn}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 border border-outline-variant rounded-xl text-sm font-semibold hover:bg-on-surface/5 transition-colors text-on-surface"
+                >
                   <img alt="Google" className="w-5 h-5" src="https://www.google.com/favicon.ico" />
                   <span>Google</span>
                 </button>
@@ -161,9 +199,9 @@ export default function Login() {
           </div>
 
           <footer className="mt-8 flex justify-center gap-6 text-xs text-outline">
-            <Link to="#" className="hover:text-on-surface transition-colors">นโยบายความเป็นส่วนตัว</Link>
-            <Link to="#" className="hover:text-on-surface transition-colors">เงื่อนไขการให้บริการ</Link>
-            <Link to="#" className="hover:text-on-surface transition-colors">ติดต่อฝ่ายสนับสนุน</Link>
+            <Link to="#" className="hover:text-on-surface transition-colors">{t('privacy_policy')}</Link>
+            <Link to="#" className="hover:text-on-surface transition-colors">{t('terms_service')}</Link>
+            <Link to="#" className="hover:text-on-surface transition-colors">{t('contact_support')}</Link>
           </footer>
         </motion.div>
       </div>

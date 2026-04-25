@@ -1,34 +1,110 @@
-import React, { useState, useRef } from 'react';
-import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useApp, Member } from '../context/AppContext';
 
-interface Member {
-  name: string;
-  role: string;
-  status: string;
-  email: string;
-  joinDate: string;
-  avatar: string;
-}
+type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
+type SortDirection = 'asc' | 'desc' | null;
 
-const INITIAL_MEMBERS: Member[] = [
-  { name: 'Sarah Jenkins', role: 'Premium Gold', status: 'Active', email: 'sarah.j@example.com', joinDate: '2022-10-12', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop' },
-  { name: 'David Miller', role: 'Professional', status: 'Pending', email: 'd.miller@company.com', joinDate: '2023-01-05', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop' },
-  { name: 'Emily Watson', role: 'Platinum', status: 'Active', email: 'emily.w@membership.io', joinDate: '2021-09-20', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop' },
-  { name: 'Alex Thompson', role: 'Platinum', status: 'Active', email: 'alex.t@member.net', joinDate: '2021-10-14', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9oFhmFaa1uZBlTYMdM_doiRJ-D_1BT1K8HBEtU1uP3Rsffzr2uJ3_XzEBQfuCDX8aem149cLYHiUgcfVtFm9LfULHbm7qnZUjBdpo_bWxIhEZuuEjsBJllfYoWLtG-n-N7NpFZlDo9l-K16wrFggc6ip4xZ0C9Qpa76Gntr9Wb7d_nuB_RwoPfJFy3qniXF9_XXB-7oz6uu7VzZTesvjtdpzkTDdO66mOOZwrT_gvr8PPcowHjH2nQILam5V77pO20QZexzsUtxag' },
-];
+const CATEGORIES = ['Volunteers', 'Committee Members', 'Event Attendees', 'Other'];
 
 export default function Members() {
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
+  const { t, members, addMember, bulkAddMembers } = useApp();
   const [isImporting, setIsImporting] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [roleFilter, setRoleFilter] = useState<string>('All');
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
+  const [showFilters, setShowFilters] = useState(false);
+  const [showImportSuccess, setShowImportSuccess] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Standard', category: 'Volunteers' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const handleFileUpload = (file: File) => {
+  useEffect(() => {
+    const state = location.state as { filter?: string, openInvite?: boolean };
+    if (state?.filter) {
+      if (state.filter === 'Active' || state.filter === 'Pending') {
+        setStatusFilter(state.filter);
+      } else {
+        setSearchQuery(state.filter);
+      }
+    }
+    if (state?.openInvite) {
+      setIsInviting(true);
+    }
+
+    const hasActionableState = state && Object.keys(state).length > 0;
+    if (hasActionableState) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newMember: Member = {
+      ...inviteForm,
+      status: 'Pending',
+      joinDate: new Date().toISOString().split('T')[0],
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(inviteForm.name)}&background=random`
+    };
+    await addMember(newMember);
+    setIsInviting(false);
+    setInviteForm({ name: '', email: '', role: 'Standard', category: 'Volunteers' });
+    setShowImportSuccess(true);
+    setTimeout(() => setShowImportSuccess(false), 3000);
+  };
+
+  const handleSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    } else if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = null;
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const filteredMembers = useMemo(() => {
+    let result = members.filter(m => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = m.name.toLowerCase().includes(q) || 
+                           m.email.toLowerCase().includes(q) || 
+                           m.role.toLowerCase().includes(q);
+      
+      const matchesStatus = statusFilter === 'All' || m.status === statusFilter;
+      const matchesRole = roleFilter === 'All' || m.role === roleFilter;
+      const matchesCategory = categoryFilter === 'All' || m.category === categoryFilter;
+
+      return matchesSearch && matchesStatus && matchesRole && matchesCategory;
+    });
+
+    if (sortConfig.key && sortConfig.direction) {
+      result.sort((a, b) => {
+        const valA = a[sortConfig.key].toLowerCase();
+        const valB = b[sortConfig.key].toLowerCase();
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [members, searchQuery, statusFilter, roleFilter, sortConfig]);
+
+  const roles = useMemo(() => ['All', ...Array.from(new Set(members.map(m => m.role)))], [members]);
+
+  const handleFileUpload = async (file: File) => {
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      setImportError('กรุณาอัปโหลดไฟล์ CSV เท่านั้น');
+      setImportError(t('error_csv_only'));
       return;
     }
 
@@ -36,26 +112,29 @@ export default function Members() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: async (results) => {
         const newMembers = results.data.map((row: any) => ({
           name: row.name || row.Name || 'ไม่ระบุชื่อ',
           role: row.role || row.Role || 'Standard',
           status: row.status || row.Status || 'Active',
+          category: row.category || row.Category || 'Other',
           email: row.email || row.Email || '',
           joinDate: new Date().toISOString().split('T')[0],
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || 'U')}&background=random`
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name || row.Name || 'U')}&background=random`
         }));
 
         if (newMembers.length === 0) {
-          setImportError('ไม่พบข้อมูลในไฟล์ CSV');
+          setImportError(t('error_csv_empty'));
           return;
         }
 
-        setMembers(prev => [...newMembers, ...prev]);
+        await bulkAddMembers(newMembers);
         setIsImporting(false);
+        setShowImportSuccess(true);
+        setTimeout(() => setShowImportSuccess(false), 3000);
       },
       error: (error) => {
-        setImportError(`เกิดข้อผิดพลาดในการอ่านไฟล์: ${error.message}`);
+        setImportError(`${t('error_csv_read')}: ${error.message}`);
       }
     });
   };
@@ -77,36 +156,237 @@ export default function Members() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
+      <AnimatePresence>
+        {showImportSuccess && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            {t('import_success')}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl text-on-surface">รายชื่อสมาชิก</h1>
-          <p className="text-on-surface-variant mt-1">จัดการและตรวจสอบสมาชิกทั้งหมดในระบบ</p>
+          <h1 className="text-3xl text-on-surface font-heading">{t('member_list')}</h1>
+          <p className="text-on-surface-variant mt-1">{t('manage_members')}</p>
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={() => setIsImporting(true)}
-            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm"
+            onClick={() => { setIsImporting(true); setIsInviting(false); }}
+            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
           >
             <Upload className="w-5 h-5" />
-            นำเข้า CSV
+            {t('import_csv')}
           </button>
-          <button className="bg-primary hover:bg-primary-container text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-primary/20">
+          <button 
+            onClick={() => { setIsInviting(true); setIsImporting(false); }}
+            className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-primary/20 active:scale-95"
+          >
             <UserPlus className="w-5 h-5" />
-            เชิญสมาชิก
+            {t('invite_member')}
           </button>
         </div>
       </header>
 
-      {/* Import Modal */}
+      {/* Invite Modal */}
       <AnimatePresence>
-        {isImporting && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-on-surface/40 backdrop-blur-sm">
+        {isInviting && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsInviting(false)}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-surface-container rounded-[2rem] w-full max-w-lg p-8 shadow-2xl relative border border-outline-variant/30"
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-outline-variant/30"
+            >
+              <button 
+                onClick={() => setIsInviting(false)}
+                className="absolute right-6 top-6 p-2 hover:bg-on-surface/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-outline" />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserPlus className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl text-on-surface font-heading">{t('invite_new')}</h2>
+                <p className="text-on-surface-variant mt-2">{t('invite_desc')}</p>
+              </div>
+
+              <form onSubmit={handleInviteSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('full_name')}</label>
+                  <input 
+                    required
+                    value={inviteForm.name}
+                    onChange={e => setInviteForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
+                    placeholder={t('name_placeholder')}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('email')}</label>
+                  <input 
+                    required
+                    type="email"
+                    value={inviteForm.email}
+                    onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
+                    placeholder="member@example.com"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('member_tier')}</label>
+                  <select 
+                    value={inviteForm.role}
+                    onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
+                  >
+                    <option value="Standard">Standard</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Platinum">Platinum</option>
+                    <option value="Premium Gold">Premium Gold</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('category')}</label>
+                  <select 
+                    value={inviteForm.category}
+                    onChange={e => setInviteForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
+                  >
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="pt-4 flex gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsInviting(false)}
+                    className="flex-1 py-3 bg-on-surface/5 text-on-surface font-bold rounded-xl hover:bg-on-surface/10 transition-colors active:scale-95"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-primary text-on-primary font-bold rounded-xl hover:bg-primary-container transition-colors active:scale-95 shadow-lg shadow-primary/20"
+                  >
+                    {t('send_invite')}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedMember && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedMember(null)}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-lg p-10 shadow-2xl border border-outline-variant/30"
+            >
+              <button 
+                onClick={() => setSelectedMember(null)}
+                className="absolute right-6 top-6 p-2 hover:bg-on-surface/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-outline" />
+              </button>
+
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-6">
+                    <img src={selectedMember.avatar} className="w-32 h-32 rounded-full border-4 border-surface shadow-xl" alt={selectedMember.name} />
+                    <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-surface shadow-sm ${
+                      selectedMember.status.toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-outline-variant'
+                    }`} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-3xl text-on-surface font-heading">{selectedMember.name}</h2>
+                    <div className={`w-3 h-3 rounded-full ${selectedMember.status.toLowerCase() === 'active' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-outline-variant'}`} />
+                  </div>
+                  <p className="text-on-surface-variant font-medium mt-1">{selectedMember.email}</p>
+                
+                <div className="flex gap-2 mt-4">
+                  <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                    {selectedMember.role}
+                  </span>
+                  <span className="px-4 py-1 bg-on-surface/5 text-on-surface rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30">
+                    {selectedMember.category}
+                  </span>
+                  <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                    selectedMember.status.toLowerCase() === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                  }`}>
+                    {selectedMember.status.toLowerCase() === 'active' ? t('online') : t('pending')}
+                  </span>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-outline-variant/10">
+                  <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('join_date')}</p>
+                    <p className="text-sm font-bold text-on-surface">{selectedMember.joinDate}</p>
+                  </div>
+                  <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('member_id')}</p>
+                    <p className="text-sm font-bold text-on-surface">MB-{(Math.random() * 10000).toFixed(0)}</p>
+                  </div>
+                </div>
+
+                <div className="w-full mt-6 flex gap-4">
+                  <button className="flex-1 py-3 border border-outline-variant rounded-xl text-sm font-bold text-on-surface hover:bg-on-surface/5 transition-all">
+                    {t('edit_info')}
+                  </button>
+                  <button className="flex-1 py-3 bg-red-500/10 text-red-500 rounded-xl text-sm font-bold hover:bg-red-500/20 transition-all">
+                    {t('suspend_member')}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Import Modal */}
+      <AnimatePresence>
+        {isImporting && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setIsImporting(false); setImportError(null); }}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-lg p-8 shadow-2xl border border-outline-variant/30"
             >
               <button 
                 onClick={() => { setIsImporting(false); setImportError(null); }}
@@ -119,8 +399,8 @@ export default function Members() {
                 <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
                   <FileSpreadsheet className="w-8 h-8" />
                 </div>
-                <h2 className="text-2xl text-on-surface font-heading">นำเข้าไฟล์สมาชิก</h2>
-                <p className="text-on-surface-variant mt-2">อัปโหลดไฟล์ CSV เพื่อเพิ่มสมาชิกหลายคนพร้อมกัน</p>
+                <h2 className="text-2xl text-on-surface font-heading">{t('import_members')}</h2>
+                <p className="text-on-surface-variant mt-2">{t('import_desc')}</p>
               </div>
 
               <div 
@@ -142,8 +422,8 @@ export default function Members() {
                   onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                 />
                 <Upload className={`w-10 h-10 mx-auto mb-4 ${isDragging ? 'text-primary' : 'text-on-surface-variant'}`} />
-                <p className="font-bold text-on-surface">คลิกเพื่ออัปโหลด หรือลากไฟล์มาที่นี่</p>
-                <p className="text-xs text-on-surface-variant mt-2">รองรับไฟล์รูปแบบ .csv เท่านั้น</p>
+                <p className="font-bold text-on-surface">{t('click_upload')}</p>
+                <p className="text-xs text-on-surface-variant mt-2 font-medium">{t('csv_format')}</p>
               </div>
 
               {importError && (
@@ -160,9 +440,9 @@ export default function Members() {
               <div className="mt-8 pt-6 border-t border-outline-variant/10 flex gap-4">
                 <button 
                   onClick={() => { setIsImporting(false); setImportError(null); }}
-                  className="flex-1 py-3 bg-on-surface/5 text-on-surface font-bold rounded-xl hover:bg-on-surface/10 transition-colors"
+                  className="flex-1 py-3 bg-on-surface/5 text-on-surface font-bold rounded-xl hover:bg-on-surface/10 transition-colors active:scale-95"
                 >
-                  ยกเลิก
+                  {t('cancel')}
                 </button>
               </div>
             </motion.div>
@@ -171,67 +451,216 @@ export default function Members() {
       </AnimatePresence>
 
       {/* Filters & Search */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
-          <input 
-            type="text" 
-            placeholder="ค้นหาชื่อ, อีเมล หรือรหัสสมาชิก..." 
-            className="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant bg-surface-container text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
-          />
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('search_placeholder')} 
+              className="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant bg-surface-container text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-6 py-3 border rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${
+              showFilters ? 'bg-primary text-on-primary border-primary' : 'bg-surface-container text-on-surface border-outline-variant hover:bg-on-surface/5'
+            }`}
+          >
+            <Filter className="w-5 h-5" />
+            {t('filters')}
+            {(statusFilter !== 'All' || roleFilter !== 'All' || categoryFilter !== 'All') && (
+              <span className="ml-1 w-2 h-2 bg-on-primary rounded-full" />
+            )}
+          </button>
         </div>
-        <button className="px-6 py-3 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-semibold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-colors shadow-sm">
-          <Filter className="w-5 h-5" />
-          ตัวกรอง
-        </button>
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="p-6 bg-surface-container border border-outline-variant/30 rounded-2xl flex flex-wrap gap-6">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest ml-1">{t('status')}</p>
+                  <div className="flex gap-2">
+                    {['All', 'Active', 'Pending'].map(status => (
+                      <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                          statusFilter === status 
+                            ? 'bg-primary text-on-primary' 
+                            : 'bg-on-surface/5 text-on-surface hover:bg-on-surface/10'
+                        }`}
+                      >
+                        {status === 'All' ? t('all') : status === 'Active' ? t('online') : t('pending')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest ml-1">{t('member_tier')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {roles.map(role => (
+                      <button
+                        key={role}
+                        onClick={() => setRoleFilter(role)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                          roleFilter === role 
+                            ? 'bg-primary text-on-primary' 
+                            : 'bg-on-surface/5 text-on-surface hover:bg-on-surface/10'
+                        }`}
+                      >
+                        {role === 'All' ? t('all') : role}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest ml-1">{t('category')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['All', ...CATEGORIES].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setCategoryFilter(cat)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                          categoryFilter === cat 
+                            ? 'bg-primary text-on-primary' 
+                            : 'bg-on-surface/5 text-on-surface hover:bg-on-surface/10'
+                        }`}
+                      >
+                        {cat === 'All' ? t('all') : cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ml-auto self-end">
+                  <button 
+                    onClick={() => { setStatusFilter('All'); setRoleFilter('All'); setCategoryFilter('All'); }}
+                    className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
+                  >
+                    {t('clear_filters')}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Table Container */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-surface-container border border-outline-variant/30 rounded-[2rem] shadow-sm overflow-x-auto"
+        className="bg-surface-container border border-outline-variant/30 rounded-[2rem] shadow-sm overflow-hidden"
       >
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-on-surface/5 border-b border-outline-variant/10">
-              <th className="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">สมาชิก</th>
-              <th className="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">ระดับ</th>
-              <th className="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">สถานะ</th>
-              <th className="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">วันที่เข้าร่วม</th>
-              <th className="px-6 py-4 text-center"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-outline-variant/10">
-            {members.map((member, idx) => (
-              <tr key={`${member.email}-${idx}`} className="hover:bg-on-surface/5 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img src={member.avatar} className="w-10 h-10 rounded-full object-cover border border-outline-variant/10" />
-                    <div>
-                      <p className="text-sm font-bold text-on-surface">{member.name}</p>
-                      <p className="text-xs text-on-surface-variant font-medium">{member.email}</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-on-surface/5 border-b border-outline-variant/10">
+                {[
+                  { key: 'name', label: t('member') },
+                  { key: 'role', label: t('member_tier') },
+                  { key: 'category', label: t('category') },
+                  { key: 'status', label: t('status') },
+                  { key: 'joinDate', label: t('join_date') }
+                ].map(({ key, label }) => (
+                  <th 
+                    key={key}
+                    onClick={() => handleSort(key as SortKey)}
+                    className="px-6 py-4 cursor-pointer hover:bg-on-surface/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+                      {label}
+                      <div className="flex flex-col opacity-50 group-hover:opacity-100">
+                        {sortConfig.key === key ? (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm font-semibold text-on-surface">{member.role}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                    member.status.toLowerCase() === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'
-                  }`}>
-                    {member.status.toLowerCase() === 'active' ? 'ออนไลน์' : 'รอดำเนินการ'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-on-surface-variant">{member.joinDate}</td>
-                <td className="px-6 py-4 text-center">
-                  <button className="p-2 hover:bg-on-surface/10 rounded-lg transition-colors">
-                    <MoreVertical className="w-5 h-5 text-on-surface-variant" />
-                  </button>
-                </td>
+                  </th>
+                ))}
+                <th className="px-6 py-4 text-center text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('actions')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/10">
+              {filteredMembers.length > 0 ? (
+                filteredMembers.map((member) => (
+                  <tr 
+                    key={member.id} 
+                    onClick={() => setSelectedMember(member)}
+                    className="hover:bg-on-surface/5 transition-colors group cursor-pointer"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <img src={member.avatar} className="w-10 h-10 rounded-full object-cover border border-outline-variant/10 shadow-sm" alt={member.name} />
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-surface shadow-sm ${
+                            member.status.toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-outline-variant'
+                          }`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{member.name}</p>
+                            <div className={`w-2 h-2 rounded-full ${member.status.toLowerCase() === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-outline-variant'}`} title={member.status.toLowerCase() === 'active' ? 'Online' : 'Offline'} />
+                          </div>
+                          <p className="text-xs text-on-surface-variant font-medium">{member.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-on-surface">{member.role}</td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-medium text-on-surface-variant">
+                        {member.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        member.status.toLowerCase() === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'
+                      }`}>
+                        {member.status.toLowerCase() === 'active' ? t('online') : t('pending')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-on-surface-variant font-medium">{member.joinDate}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button className="p-2 hover:bg-on-surface/10 rounded-lg transition-colors active:scale-90">
+                        <MoreVertical className="w-5 h-5 text-on-surface-variant" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-50">
+                      <Search className="w-10 h-10" />
+                      <p className="text-on-surface font-semibold">{t('no_results')}</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </motion.div>
     </div>
   );

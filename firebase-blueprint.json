@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Member",
+      "description": "System member profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" },
+        "email": { "type": "string" },
+        "joinDate": { "type": "string" },
+        "avatar": { "type": "string" },
+        "category": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "email", "status", "role"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "System activity log",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "sub": { "type": "string" },
+        "amount": { "type": "string" },
+        "time": { "type": "string" },
+        "icon": { "type": "string" },
+        "iconBg": { "type": "string" },
+        "iconColor": { "type": "string" },
+        "description": { "type": "string" },
+        "reference": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "reference"]
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Collection of all members"
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Collection of activity logs"
+    }
+  }
+}
