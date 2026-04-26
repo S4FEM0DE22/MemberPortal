@@ -9,7 +9,7 @@ interface NavbarProps {
 
 export default function Navbar({ onToggleMenu }: NavbarProps) {
   const location = useLocation();
-  const { theme, toggleTheme, t, logout, isAdmin } = useApp();
+  const { theme, toggleTheme, t, logout, isAdmin, currentMember, user } = useApp();
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -83,8 +83,9 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
         >
           <img
             className="h-full w-full object-cover rounded-[0.5rem]"
-            src="https://ui-avatars.com/api/?name=User&background=random"
+            src={currentMember?.avatar || user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentMember?.name || user?.displayName || 'User')}&background=random`}
             alt="User profile"
+            referrerPolicy="no-referrer"
           />
         </Link>
       </div>

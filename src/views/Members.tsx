@@ -12,8 +12,9 @@ type SortDirection = 'asc' | 'desc' | null;
 const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other'];
 
 export default function Members() {
-  const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers, bulkDeleteMembers } = useApp();
+  const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers, bulkDeleteMembers, bulkUpdateMemberStatus } = useApp();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -104,6 +105,17 @@ export default function Members() {
     if (!window.confirm(t('are_you_sure'))) return;
     await bulkDeleteMembers(selectedIds);
     setSelectedIds([]);
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (selectedIds.length === 0) return;
+    setIsUpdatingStatus(true);
+    try {
+      await bulkUpdateMemberStatus(selectedIds, status);
+      setSelectedIds([]);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -302,22 +314,58 @@ export default function Members() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-4 bg-surface-container border border-outline px-6 py-4 rounded-3xl shadow-2xl"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[90] flex flex-col md:flex-row items-center gap-4 bg-surface-container border border-outline px-6 py-4 rounded-3xl shadow-2xl"
           >
-            <span className="text-sm font-black text-on-surface uppercase tracking-widest">{t('delete_selected').replace('{count}', selectedIds.length.toString())}</span>
-            <div className="h-6 w-px bg-outline/30 mx-2" />
-            <button 
-              onClick={() => setSelectedIds([])}
-              className="px-4 py-2 text-xs font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors"
-            >
-              {t('cancel')}
-            </button>
-            <button 
-              onClick={handleBulkDelete}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 active:scale-95"
-            >
-              {t('delete_member')}
-            </button>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-black text-on-surface uppercase tracking-widest whitespace-nowrap">
+                {selectedIds.length} {t('members')}
+              </span>
+              <div className="h-6 w-px bg-outline/30 mx-2 hidden md:block" />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button 
+                disabled={isUpdatingStatus}
+                onClick={() => handleBulkStatusUpdate('Active')}
+                className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+              >
+                {t('active')}
+              </button>
+              <button 
+                disabled={isUpdatingStatus}
+                onClick={() => handleBulkStatusUpdate('Pending')}
+                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+              >
+                {t('pending')}
+              </button>
+              <button 
+                disabled={isUpdatingStatus}
+                onClick={() => handleBulkStatusUpdate('Suspended')}
+                className="bg-slate-500 hover:bg-slate-600 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-slate-500/20 active:scale-95"
+              >
+                {t('suspend_member')}
+              </button>
+              
+              <div className="h-6 w-px bg-outline/30 mx-2" />
+              
+              <button 
+                disabled={isUpdatingStatus}
+                onClick={handleBulkDelete}
+                className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 active:scale-95"
+              >
+                {t('delete_member')}
+              </button>
+              
+              <div className="h-6 w-px bg-outline/30 mx-2" />
+
+              <button 
+                disabled={isUpdatingStatus}
+                onClick={() => setSelectedIds([])}
+                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors"
+              >
+                {t('cancel')}
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

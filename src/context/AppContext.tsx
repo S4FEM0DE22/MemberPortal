@@ -130,6 +130,7 @@ interface AppContextType {
   deleteMember: (id: string) => Promise<void>;
   bulkAddMembers: (members: Member[]) => Promise<void>;
   bulkDeleteMembers: (ids: string[]) => Promise<void>;
+  bulkUpdateMemberStatus: (ids: string[], status: string) => Promise<void>;
   exportMembers: () => Promise<void>;
   purchaseItem: (amount: number) => Promise<void>;
   upgradeTier: (newRole: string, cost: number) => Promise<void>;
@@ -166,6 +167,7 @@ const translations = {
     member_tier: 'ระดับสมาชิก',
     export_report: 'ส่งออกรายงาน',
     download_csv: 'ดาวน์โหลด CSV',
+    bulk_status_update: 'อัปเดตสถานะแบบกลุ่ม',
     home: 'หน้าแรก',
     members: 'สมาชิก',
     profile: 'โปรไฟล์',
@@ -426,6 +428,7 @@ const translations = {
     member_tier: 'Member Tier',
     export_report: 'Export Report',
     download_csv: 'Download CSV',
+    bulk_status_update: 'Bulk Status Update',
     home: 'Home',
     members: 'Members',
     profile: 'Profile',
@@ -1066,6 +1069,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const bulkUpdateMemberStatus = async (ids: string[], status: string) => {
+    try {
+      const batch = writeBatch(db);
+      ids.forEach(id => {
+        batch.update(doc(db, 'members', id), { status });
+      });
+      await batch.commit();
+
+      await logActivity({
+        title: t('bulk_status_update'),
+        sub: `${ids.length} members updated to ${status}`,
+        type: 'member',
+        description: `Admin updated status for ${ids.length} members to ${status}.`,
+        reference: `BLK-UPD-${ids.length}`
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'members (bulk status)');
+    }
+  };
+
   const exportMembers = async () => {
     if (members.length === 0) return;
     const Papa = await import('papaparse');
@@ -1192,6 +1215,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       bulkAddMembers,
       exportMembers,
       bulkDeleteMembers,
+      bulkUpdateMemberStatus,
       user,
       isAdmin,
       currentMember,
