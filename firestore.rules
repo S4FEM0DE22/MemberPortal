@@ -22,6 +22,10 @@ service cloud.firestore {
       return resource.data;
     }
 
+    function isOwner(email) {
+      return isSignedIn() && request.auth.token.email == email;
+    }
+
     // Helper to check if the current user is an admin
     // We check the 'members' collection for a document where isAdmin is true and email matches request.auth.token.email
     // Note: Since we use random IDs, we can't use get(/members/$(uid)).
@@ -34,6 +38,11 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/members/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/members/$(request.auth.uid)).data.isAdmin == true)
       );
+    }
+
+    // Allow connection test
+    match /test/connection {
+      allow read: if true;
     }
 
     // --- Members Collection ---
@@ -54,34 +63,33 @@ service cloud.firestore {
                (!('userId' in data) || (data.userId is string));
       }
 
-      function isOwner(email) {
-        return isSignedIn() && request.auth.token.email == email;
-      }
-
-      allow read: if isSignedIn();
+      // Restrict read to admins and owners
+      allow get, list: if isSignedIn() && (isSystemAdmin() || isOwner(resource.data.email));
       
-      allow create: if isSignedIn() && isValidMember(incoming());
+      allow create: if isSignedIn() && isValidMember(incoming()) && (isOwner(incoming().email) || isSystemAdmin());
 
       allow update: if isSignedIn() && (
         isSystemAdmin() || 
         (isOwner(existing().email) && 
          isValidMember(incoming()) && 
          incoming().email == existing().email &&
-         incoming().isAdmin == existing().isAdmin && // Users cannot make themselves admin
-         incoming().status == existing().status)      // Users cannot approve themselves
+         incoming().isAdmin == existing().isAdmin && 
+         incoming().status == existing().status)
       );
 
-      allow delete: if isSystemAdmin();
+      allow delete: if isSystemAdmin() || (isSignedIn() && isOwner(existing().email));
     }
 
     // --- Activities Collection ---
     match /activities/{activityId} {
       function isValidActivity(data) {
         return data.title is string && data.title.size() <= 200 &&
+               data.type in ['payment', 'member', 'system', 'security', 'notification', 'profile'] &&
                (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
                (!('reference' in data) || (data.reference is string && data.reference.size() <= 100)) &&
-               (!('amount' in data) || (data.amount is string)) &&
-               (!('sub' in data) || (data.sub is string));
+               (!('userName' in data) || (data.userName is string && data.userName.size() <= 200)) &&
+               (!('userId' in data) || (data.userId is string)) &&
+               (!('sub' in data) || (data.sub is string && data.sub.size() <= 500));
       }
 
       allow read: if isSignedIn() && (isSystemAdmin() || resource.data.userId == request.auth.uid);

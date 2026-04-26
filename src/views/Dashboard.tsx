@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { Link } from 'react-router-dom';
 import { TIER_COLORS, TIER_BENEFITS, ALL_ROLES } from '../constants';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export default function Dashboard() {
   const { t, members, user, isAdmin, currentMember, exportMembers, purchaseItem, activities: realActivities } = useApp();
@@ -242,7 +243,14 @@ export default function Dashboard() {
                           <Icon className={`${act.iconColor} w-7 h-7`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-base font-bold text-on-surface truncate tracking-tight">{act.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-base font-bold text-on-surface truncate tracking-tight">{act.title}</p>
+                            {act.userName && isAdmin && (
+                              <span className="px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded uppercase tracking-widest border border-primary/20 leading-none h-fit">
+                                {act.userName}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-[0.15em] opacity-50 mt-0.5">{act.sub}</p>
                         </div>
                         <div className="text-right shrink-0">
@@ -266,26 +274,76 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <div className="bg-surface-container p-10 rounded-[3rem] border border-outline shadow-sm flex flex-col">
-              <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em] mb-10">{t('member_tier_distribution')}</h3>
-              <div className="space-y-8 flex-1">
-                {tierStats.map((tier) => (
-                  <div key={tier.name} className="group-stats">
-                    <div className="flex justify-between items-end gap-4 text-xs mb-4">
-                      <span className="text-on-surface font-bold text-sm tracking-tight truncate">{tier.name}</span>
-                      <span className="text-on-surface font-black font-mono tracking-widest opacity-40 shrink-0">{tier.value}%</span>
-                    </div>
-                    <div className="w-full bg-on-surface/[0.06] h-3 rounded-full overflow-hidden p-[1px]">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${tier.value}%` }}
-                        className={`${tier.color} h-full rounded-full shadow-lg shadow-current/10`} 
+            <div className="bg-surface-container p-10 rounded-[3rem] border border-outline shadow-sm flex flex-col min-h-[500px]">
+              <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em] mb-6">{t('member_tier_distribution')}</h3>
+              
+              <div className="flex-1 flex flex-col">
+                <div className="h-[240px] w-full relative mb-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={tierStats}
+                        innerRadius={60}
+                        outerRadius={85}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                        animationDuration={1500}
+                        animationBegin={300}
+                      >
+                        {tierStats.map((entry, index) => {
+                          const colorClass = entry.color; // e.g. "bg-amber-500"
+                          // We need to extract the hex or just use current theme colors if possible
+                          // but recharts needs hex/literal colors for Cell fill.
+                          // I'll map the standard tailwind classes to hex for the chart.
+                          const colorMap: Record<string, string> = {
+                            'bg-amber-500': '#f59e0b',
+                            'bg-primary': '#3b82f6',
+                            'bg-emerald-500': '#10b981',
+                            'bg-slate-400': '#94a3b8',
+                            'bg-purple-500': '#a855f7',
+                            'bg-rose-500': '#f43f5e',
+                            'bg-cyan-500': '#06b6d4',
+                            'bg-indigo-500': '#6366f1'
+                          };
+                          return <Cell key={`cell-${index}`} fill={colorMap[colorClass] || '#3b82f6'} />;
+                        })}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-surface rounded-xl p-3 shadow-2xl border border-outline/50 backdrop-blur-md">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">{payload[0].name}</p>
+                                <p className="text-lg font-black font-mono text-on-surface">{payload[0].value}%</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
                       />
-                    </div>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40">Tiers</p>
+                    <p className="text-2xl font-black text-on-surface font-mono tracking-tighter tabular-nums">{totalMembersCount}</p>
                   </div>
-                ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {tierStats.map((tier) => (
+                    <div key={tier.name} className="flex flex-col gap-2 p-3 rounded-2xl bg-on-surface/[0.03] border border-outline/10">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2.5 h-2.5 rounded-full ${tier.color}`} />
+                        <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest truncate">{tier.name}</span>
+                      </div>
+                      <p className="text-lg font-black text-on-surface font-mono tracking-tighter">{tier.value}%</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="mt-10 pt-8 border-t border-outline/50">
+
+              <div className="mt-8 pt-8 border-t border-outline/50">
                 <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-[0.2em] leading-relaxed opacity-40">
                   {t('data_updated_realtime')}
                 </p>
@@ -444,7 +502,14 @@ export default function Dashboard() {
                          <Icon className={`${act.iconColor} w-6 h-6 sm:w-8 sm:h-8`} />
                        </div>
                        <div className="flex-1 min-w-0">
-                         <p className="text-lg sm:text-xl font-bold text-on-surface truncate tracking-tight">{act.title}</p>
+                         <div className="flex items-center gap-2">
+                           <p className="text-lg sm:text-xl font-bold text-on-surface truncate tracking-tight">{act.title}</p>
+                           {act.userName && isAdmin && (
+                             <span className="px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded uppercase tracking-widest border border-primary/20 leading-none h-fit">
+                               {act.userName}
+                             </span>
+                           )}
+                         </div>
                          <p className="text-[10px] sm:text-xs text-on-surface-variant font-bold uppercase tracking-[0.15em] opacity-40 mt-0.5 sm:mt-1">{act.sub}</p>
                        </div>
                      </div>

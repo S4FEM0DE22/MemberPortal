@@ -113,6 +113,7 @@ export interface Activity {
   description: string;
   reference: string;
   userId?: string;
+  userName?: string;
 }
 
 interface AppContextType {
@@ -128,6 +129,7 @@ interface AppContextType {
   updateProfileData: (updates: { fullName?: string, photoURL?: string, phone?: string, address?: string }) => Promise<void>;
   deleteMember: (id: string) => Promise<void>;
   bulkAddMembers: (members: Member[]) => Promise<void>;
+  bulkDeleteMembers: (ids: string[]) => Promise<void>;
   exportMembers: () => Promise<void>;
   purchaseItem: (amount: number) => Promise<void>;
   upgradeTier: (newRole: string, cost: number) => Promise<void>;
@@ -185,6 +187,8 @@ const translations = {
     member_details: 'รายละเอียดสมาชิก',
     user_id: 'รหัสผู้ใช้',
     member_since: 'เป็นสมาชิกตั้งแต่',
+    delete_selected: 'ลบสมาชิกที่เลือก ({count})',
+    select_all: 'เลือกทั้งหมด',
     account_status: 'สถานะบัญชี',
     active: 'ใช้งานอยู่',
     renew_in: 'สมาชิกของคุณจะต่ออายุในอีก {days} วัน',
@@ -443,6 +447,8 @@ const translations = {
     member_details: 'Member Details',
     user_id: 'User ID',
     member_since: 'Member since',
+    delete_selected: 'Delete Selected ({count})',
+    select_all: 'Select All',
     account_status: 'Account Status',
     active: 'Active',
     renew_in: 'Your membership will renew in {days} days',
@@ -742,9 +748,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Admins see all, users see their own
-    let q = query(collection(db, 'activities'), orderBy('timestamp', 'desc'), limit(50));
+    let q = query(collection(db, 'activities'), orderBy('timestamp', 'desc'), limit(100));
     if (!isAdmin) {
-      q = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(20));
+      q = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(50));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -790,7 +796,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await addDoc(collection(db, 'activities'), {
         ...activity,
         timestamp: serverTimestamp(),
-        userId: activity.userId || user?.uid || null
+        userId: activity.userId || user?.uid || null,
+        userName: activity.userName || currentMember?.name || user?.displayName || user?.email?.split('@')[0] || t('unspecified_name')
       });
     } catch (error) {
       console.error("Error logging activity:", error);
@@ -917,7 +924,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sub: `${member.name} added by Admin`,
         type: 'member',
         description: `New member manually added to ${member.role} Tier.`,
-        reference: `MEM-${docRef.id.substring(0, 8).toUpperCase()}`
+        reference: `MEM-${docRef.id.substring(0, 8).toUpperCase()}`,
+        userId: docRef.id
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'members');
@@ -926,26 +934,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateMember = async (id: string, updates: Partial<Member>) => {
     try {
-      await setDoc(doc(db, 'members', id), updates, { merge: true });
+      const memberRef = doc(db, 'members', id);
+      await setDoc(memberRef, updates, { merge: true });
       
       const changedFields = Object.keys(updates).join(', ');
       let activityTitle = t('profile_updated');
       let activitySub = `Member ${id.substring(0, 8)} updated`;
 
+      // Try to get more info for better logging
+      const mDoc = await getDocFromServer(memberRef);
+      const mData = mDoc.data() as Member;
+      if (mData) {
+        activitySub = `${mData.name || mData.email || id.substring(0, 8)} update`;
+      }
+
       if (updates.status === 'Active' && !updates.name) {
         activityTitle = t('approved_request');
-        activitySub = `Member ${id.substring(0, 8)} approved`;
+        activitySub = `${mData?.name || id.substring(0, 8)} approved`;
       } else if (updates.status === 'Suspended') {
         activityTitle = t('suspend_member');
-        activitySub = `Member ${id.substring(0, 8)} suspended`;
+        activitySub = `${mData?.name || id.substring(0, 8)} suspended`;
       }
 
       await logActivity({
         title: activityTitle,
         sub: activitySub,
         type: 'member',
-        description: `Admin updated member: ${changedFields}`,
-        reference: `UPD-${id.substring(0, 8).toUpperCase()}`
+        description: `Admin updated member fields: ${changedFields}`,
+        reference: `UPD-${id.substring(0, 8).toUpperCase()}`,
+        userId: id
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `members/${id}`);
@@ -996,14 +1013,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteMember = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'members', id));
+      const memberRef = doc(db, 'members', id);
+      const mDoc = await getDocFromServer(memberRef);
+      const mData = mDoc.data() as Member;
+      const targetName = mData?.name || id.substring(0, 8);
+
+      await deleteDoc(memberRef);
 
       await logActivity({
         title: t('delete_member'),
-        sub: `Member ${id.substring(0, 8)} removed`,
+        sub: `${targetName} removed`,
         type: 'member',
-        description: 'Admin deleted a member record from the system.',
-        reference: `DEL-${id.substring(0, 8).toUpperCase()}`
+        description: `Admin deleted member record: ${targetName} (${id})`,
+        reference: `DEL-${id.substring(0, 8).toUpperCase()}`,
+        userId: id
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `members/${id}`);
@@ -1020,6 +1043,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await batch.commit();
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'members (bulk)');
+    }
+  };
+
+  const bulkDeleteMembers = async (ids: string[]) => {
+    try {
+      const batch = writeBatch(db);
+      ids.forEach(id => {
+        batch.delete(doc(db, 'members', id));
+      });
+      await batch.commit();
+
+      await logActivity({
+        title: t('delete_member'),
+        sub: `${ids.length} members removed`,
+        type: 'member',
+        description: `Admin deleted ${ids.length} member records in bulk.`,
+        reference: `BLK-DEL-${ids.length}`
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'members (bulk)');
     }
   };
 
@@ -1114,6 +1157,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Force admin back if they were an admin
           isAdmin: memberData.isAdmin || user.email === 'noppanun47@gmail.com'
         });
+
+        await logActivity({
+          title: t('upgrade'),
+          sub: `Upgraded to ${newRole}`,
+          type: 'member',
+          description: `Member upgraded tier manually. Cost: ฿${cost.toLocaleString()}`,
+          reference: `UPG-${memberDoc.id.substring(0, 8).toUpperCase()}`,
+          userId: user.uid
+        });
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'upgrade_tier');
@@ -1139,6 +1191,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteMember,
       bulkAddMembers,
       exportMembers,
+      bulkDeleteMembers,
       user,
       isAdmin,
       currentMember,

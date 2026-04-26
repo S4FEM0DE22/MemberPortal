@@ -60,14 +60,7 @@ export default function App() {
               </AdminRoute>
             } 
           />
-          <Route 
-            path="activities" 
-            element={
-              <AdminRoute>
-                <Activities />
-              </AdminRoute>
-            } 
-          />
+          <Route path="activities" element={<Activities />} />
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
         </Route>

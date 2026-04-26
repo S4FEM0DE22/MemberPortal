@@ -25,8 +25,8 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
     { name: t('home'), path: '/', icon: LayoutDashboard },
     ...(isAdmin ? [
       { name: t('members'), path: '/members', icon: Users },
-      { name: t('activities'), path: '/activities', icon: Users }
     ] : []),
+    { name: t('activities'), path: '/activities', icon: Users },
     { name: t('profile'), path: '/profile', icon: User },
     { name: t('settings'), path: '/settings', icon: SettingsIcon },
   ];

@@ -12,7 +12,8 @@ type SortDirection = 'asc' | 'desc' | null;
 const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other'];
 
 export default function Members() {
-  const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers } = useApp();
+  const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers, bulkDeleteMembers } = useApp();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -95,6 +96,29 @@ export default function Members() {
     if (!window.confirm(t('are_you_sure'))) return;
     await deleteMember(id);
     setSelectedMember(null);
+    setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(t('are_you_sure'))) return;
+    await bulkDeleteMembers(selectedIds);
+    setSelectedIds([]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredMembers.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredMembers.map(m => m.id!).filter(Boolean));
+    }
+  };
+
+  const toggleSelect = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const handleExport = () => {
@@ -271,6 +295,33 @@ export default function Members() {
 
   return (
     <div className="space-y-8 pb-20">
+      {/* Bulk actions float bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-4 bg-surface-container border border-outline px-6 py-4 rounded-3xl shadow-2xl"
+          >
+            <span className="text-sm font-black text-on-surface uppercase tracking-widest">{t('delete_selected').replace('{count}', selectedIds.length.toString())}</span>
+            <div className="h-6 w-px bg-outline/30 mx-2" />
+            <button 
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-2 text-xs font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button 
+              onClick={handleBulkDelete}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 active:scale-95"
+            >
+              {t('delete_member')}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showImportSuccess && (
           <motion.div 
@@ -929,6 +980,26 @@ export default function Members() {
           <table className="w-full text-left border-separate border-spacing-0 min-w-[1000px] lg:min-w-0">
             <thead>
               <tr className="bg-on-surface/[0.01] border-b border-outline/50">
+                <th className="px-8 py-6 w-12">
+                   <div className="flex items-center justify-center">
+                     <button 
+                       onClick={toggleSelectAll}
+                       className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${
+                         selectedIds.length === filteredMembers.length && filteredMembers.length > 0
+                           ? 'bg-primary border-primary' 
+                           : 'border-outline hover:border-primary'
+                       }`}
+                     >
+                       {selectedIds.length === filteredMembers.length && filteredMembers.length > 0 && (
+                         <motion.div 
+                           initial={{ scale: 0 }}
+                           animate={{ scale: 1 }}
+                           className="w-2.5 h-2.5 bg-white rounded-[2px]"
+                         />
+                       )}
+                     </button>
+                   </div>
+                </th>
                 {[
                   { key: 'name', label: t('member') },
                   { key: 'role', label: t('member_tier') },
@@ -959,8 +1030,30 @@ export default function Members() {
                     transition={{ delay: idx * 0.02 + 0.3 }}
                     key={member.id || idx}
                     onClick={() => setSelectedMember(member)}
-                    className="hover:bg-on-surface/[0.02] transition-colors group cursor-pointer relative"
+                    className={`hover:bg-on-surface/[0.02] transition-colors group cursor-pointer relative ${
+                      selectedIds.includes(member.id!) ? 'bg-primary/[0.03]' : ''
+                    }`}
                   >
+                    <td className="px-8 py-6 w-12">
+                       <div className="flex items-center justify-center">
+                         <button 
+                           onClick={(e) => member.id && toggleSelect(e, member.id)}
+                           className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${
+                             selectedIds.includes(member.id!)
+                               ? 'bg-primary border-primary' 
+                               : 'border-outline group-hover:border-primary'
+                           }`}
+                         >
+                           {selectedIds.includes(member.id!) && (
+                             <motion.div 
+                               initial={{ scale: 0 }}
+                               animate={{ scale: 1 }}
+                               className="w-2.5 h-2.5 bg-white rounded-[2px]"
+                             />
+                           )}
+                         </button>
+                       </div>
+                    </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-6">
                         <div className="relative group/av">
@@ -1018,7 +1111,7 @@ export default function Members() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-8 py-24 text-center">
+                  <td colSpan={7} className="px-8 py-24 text-center">
                     <div className="flex flex-col items-center gap-6">
                       <div className="h-24 w-24 rounded-[2rem] bg-on-surface/[0.02] border border-outline flex items-center justify-center rotate-12">
                         <Search className="w-10 h-10 text-on-surface-variant/20 -rotate-12" />

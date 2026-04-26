@@ -19,7 +19,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function Activities() {
-  const { t, activities: realActivities } = useApp();
+  const { t, activities: realActivities, isAdmin } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
 
@@ -197,6 +197,11 @@ export default function Activities() {
                     <div className="sm:col-span-6 flex flex-col justify-center min-w-0 sm:pl-4 w-full">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="text-sm sm:text-base font-bold text-on-surface truncate tracking-tight">{act.title}</h3>
+                        {act.userName && isAdmin && (
+                          <span className="px-2 py-0.5 bg-primary/10 text-primary text-[8px] sm:text-[9px] font-black rounded uppercase tracking-widest border border-primary/20 leading-none">
+                            {act.userName}
+                          </span>
+                        )}
                         {act.status && (
                           <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[8px] sm:text-[9px] font-black rounded uppercase tracking-widest border border-emerald-500/20 leading-none">
                             {act.status}
