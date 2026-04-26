@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ArrowUpDown, BadgeCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -9,7 +9,7 @@ type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
 type SortDirection = 'asc' | 'desc' | null;
 
 const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other'];
-const ALL_ROLES = ['Standard', 'Silver', 'Gold', 'Professional', 'Premium', 'Platinum', 'Premium Gold', 'Diamond', 'VIP', 'Founder', 'Admin'];
+const ALL_ROLES = ['Standard', 'Silver', 'Gold', 'Professional', 'Premium', 'Platinum', 'Premium Gold', 'Diamond', 'VIP', 'Founder', 'Elite', 'Legend'];
 
 export default function Members() {
   const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers } = useApp();
@@ -27,7 +27,7 @@ export default function Members() {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
   const [showFilters, setShowFilters] = useState(false);
   const [showImportSuccess, setShowImportSuccess] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Standard', category: 'Volunteers' });
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Standard', category: 'Volunteers', isAdmin: false, address: '', phone: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,7 +63,7 @@ export default function Members() {
     };
     await addMember(newMember);
     setIsInviting(false);
-    setInviteForm({ name: '', email: '', role: 'Standard', category: 'Volunteers' });
+    setInviteForm({ name: '', email: '', role: 'Standard', category: 'Volunteers', isAdmin: false, address: '', phone: '' });
     setShowImportSuccess(true);
     setTimeout(() => setShowImportSuccess(false), 3000);
   };
@@ -83,6 +83,12 @@ export default function Members() {
     const newStatus = member.status === 'Suspended' ? 'Active' : 'Suspended';
     await updateMember(member.id, { status: newStatus });
     setSelectedMember({ ...member, status: newStatus });
+  };
+
+  const handleApprove = async (member: Member) => {
+    if (!member.id) return;
+    await updateMember(member.id, { status: 'Active' });
+    setSelectedMember({ ...member, status: 'Active' });
   };
 
   const handleDelete = async (id: string) => {
@@ -120,12 +126,20 @@ export default function Members() {
       const q = searchQuery.toLowerCase();
       // If searchQuery is "all", we don't want to filter by it as a string
       const matchesSearch = q === '' || q === 'all' || 
-                           m.name.toLowerCase().includes(q) || 
-                           m.email.toLowerCase().includes(q) || 
-                           m.role.toLowerCase().includes(q);
+                           m.name?.toLowerCase().includes(q) || 
+                           m.email?.toLowerCase().includes(q) || 
+                           m.role?.toLowerCase().includes(q) ||
+      (m.address?.toLowerCase().includes(q) || false);
       
       const matchesStatus = statusFilter === 'All' || m.status === statusFilter;
-      const matchesRole = roleFilter === 'All' || m.role === roleFilter;
+      
+      let matchesRole = roleFilter === 'All';
+      if (roleFilter === 'Admin') {
+        matchesRole = m.isAdmin === true;
+      } else if (roleFilter !== 'All') {
+        matchesRole = m.role === roleFilter;
+      }
+
       const matchesCategory = categoryFilter === 'All' || m.category === categoryFilter;
 
       return matchesSearch && matchesStatus && matchesRole && matchesCategory;
@@ -133,8 +147,8 @@ export default function Members() {
 
     if (sortConfig.key && sortConfig.direction) {
       result.sort((a, b) => {
-        const valA = a[sortConfig.key].toLowerCase();
-        const valB = b[sortConfig.key].toLowerCase();
+        const valA = (a[sortConfig.key] || '').toLowerCase();
+        const valB = (b[sortConfig.key] || '').toLowerCase();
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
@@ -142,19 +156,25 @@ export default function Members() {
     }
 
     return result;
-  }, [members, searchQuery, statusFilter, roleFilter, sortConfig]);
+  }, [members, searchQuery, statusFilter, roleFilter, categoryFilter, sortConfig]);
 
   const rolesSummary = useMemo(() => {
     const counts: Record<string, number> = {};
+    let adminCount = 0;
     members.forEach(m => {
       counts[m.role] = (counts[m.role] || 0) + 1;
+      if (m.isAdmin) adminCount++;
     });
     
     // Ensure all defined roles show up even if 0, plus any others that exist
-    const allKnownRoles = Array.from(new Set([...ALL_ROLES, ...Object.keys(counts)])).sort();
+    const allKnownRoles = Array.from(new Set([
+      ...ALL_ROLES.filter(r => r !== 'Admin'), 
+      ...Object.keys(counts).filter(k => k !== 'Admin')
+    ])).sort();
     
     return [
       { role: 'Total', count: members.length, isTotal: true },
+      { role: 'Admin', count: adminCount, isAdminSection: true },
       ...allKnownRoles.map(role => ({
         role,
         count: counts[role] || 0,
@@ -265,69 +285,71 @@ export default function Members() {
         )}
       </AnimatePresence>
 
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl text-on-surface font-heading">{t('member_list')}</h1>
-          <p className="text-on-surface-variant mt-1">{t('manage_members')}</p>
+      <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-12">
+        <div className="space-y-2">
+          <h1 className="text-5xl text-on-surface font-heading font-black uppercase tracking-tighter leading-none">{t('member_list')}</h1>
+          <p className="text-on-surface-variant text-sm font-medium tracking-tight opacity-60 max-w-md">{t('manage_members')}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <button 
             onClick={generateRandomMembers}
-            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
+            className="px-6 py-3 border border-outline rounded-2xl bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
-            <UserPlus className="w-5 h-5" />
+            <UserPlus className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             <span>{t('generate_random')}</span>
           </button>
           <button 
             onClick={() => { setIsImporting(true); setIsInviting(false); }}
-            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
+            className="px-6 py-3 border border-outline rounded-2xl bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
-            <Upload className="w-5 h-5" />
+            <Upload className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             {t('import_csv')}
           </button>
           <button 
             onClick={exportMembers}
-            className="px-6 py-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface font-bold flex items-center justify-center gap-2 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95"
+            className="px-6 py-3 border border-outline rounded-2xl bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
-            <FileSpreadsheet className="w-5 h-5" />
+            <FileSpreadsheet className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             <span>{t('export_report')}</span>
           </button>
           <button 
             onClick={() => { setIsInviting(true); setIsImporting(false); }}
-            className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-primary/20 active:scale-95"
+            className="bg-primary hover:bg-primary-container text-on-primary px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-xl shadow-primary/20 active:scale-95"
           >
-            <UserPlus className="w-5 h-5" />
+            <UserPlus className="w-4 h-4" />
             {t('invite_member')}
           </button>
         </div>
       </header>
 
       {/* Roles Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 mb-8">
         {rolesSummary.map((item) => {
           const isSelected = item.isTotal ? roleFilter === 'All' : roleFilter === item.role;
           return (
             <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ y: -4, shadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+              whileTap={{ scale: 0.96 }}
               key={item.role}
               onClick={() => setRoleFilter(item.isTotal ? 'All' : (item.role === roleFilter ? 'All' : item.role))}
-              className={`p-4 rounded-2xl border text-left transition-all w-full h-full ${
+              className={`p-6 rounded-[2rem] border text-left transition-all w-full h-full group ${
                 isSelected 
-                  ? 'bg-primary border-primary shadow-lg shadow-primary/20' 
-                  : 'bg-surface-container border-outline-variant/30 hover:border-primary/50'
+                  ? 'bg-primary border-primary shadow-2xl shadow-primary/20' 
+                  : 'bg-surface-container border-outline hover:border-primary/40 shadow-sm'
               }`}
             >
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${
-                isSelected ? 'text-on-primary/80' : 'text-on-surface-variant'
-              }`}>
-                {item.isTotal ? t('total_members') : item.role}
-              </p>
-              <p className={`text-xl font-bold ${
-                isSelected ? 'text-on-primary' : 'text-on-surface'
-              }`}>
-                {item.count.toLocaleString()}
-              </p>
+              <div className="flex flex-col justify-between h-full space-y-4">
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                  isSelected ? 'text-on-primary/70' : 'text-on-surface-variant opacity-40 group-hover:opacity-100 transition-opacity'
+                }`}>
+                  {item.isTotal ? t('total_members') : item.role}
+                </p>
+                <p className={`text-3xl font-black font-mono tracking-tighter tabular-nums ${
+                  isSelected ? 'text-on-primary' : 'text-on-surface'
+                }`}>
+                  {item.count.toLocaleString()}
+                </p>
+              </div>
             </motion.button>
           );
         })}
@@ -399,17 +421,27 @@ export default function Members() {
                     ))}
                   </select>
                 </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('category')}</label>
-                  <select 
-                    value={inviteForm.category}
-                    onChange={e => setInviteForm(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
-                  >
-                    {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{t(cat)}</option>
-                    ))}
-                  </select>
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('address')}</label>
+                  <input 
+                    value={inviteForm.address}
+                    onChange={e => setInviteForm(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
+                    placeholder="123 Sukhumvit, Bangkok"
+                  />
+                </div>
+
+                <div className="space-y-1.5 pt-2">
+                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-on-surface/5 rounded-xl border border-outline-variant hover:border-primary/50 transition-all">
+                    <input 
+                      type="checkbox"
+                      checked={inviteForm.isAdmin}
+                      onChange={e => setInviteForm(prev => ({ ...prev, isAdmin: e.target.checked }))}
+                      className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">Grant Admin Permissions</span>
+                  </label>
                 </div>
                 
                 <div className="pt-4 flex gap-4">
@@ -461,16 +493,21 @@ export default function Members() {
                   <div className="relative mb-6">
                     <img src={selectedMember.avatar} className="w-32 h-32 rounded-full border-4 border-surface shadow-xl" alt={selectedMember.name} />
                     <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-surface shadow-sm ${
-                      selectedMember.status.toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-outline-variant'
+                      selectedMember.status?.toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-outline-variant'
                     }`} />
                   </div>
                   <div className="flex items-center gap-3">
                     <h2 className="text-3xl text-on-surface font-heading">{selectedMember.name}</h2>
-                    <div className={`w-3 h-3 rounded-full ${selectedMember.status.toLowerCase() === 'active' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-outline-variant'}`} />
+                    <div className={`w-3 h-3 rounded-full ${selectedMember.status?.toLowerCase() === 'active' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-outline-variant'}`} />
                   </div>
                   <p className="text-on-surface-variant font-medium mt-1">{selectedMember.email}</p>
                 
                 <div className="flex gap-2 mt-4">
+                  {selectedMember.isAdmin && (
+                    <span className="px-4 py-1 bg-rose-500/10 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-500/20 shadow-sm">
+                      Admin
+                    </span>
+                  )}
                   <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20">
                     {selectedMember.role}
                   </span>
@@ -478,9 +515,9 @@ export default function Members() {
                     {t(selectedMember.category)}
                   </span>
                   <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                    selectedMember.status.toLowerCase() === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                    selectedMember.status?.toLowerCase() === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
                   }`}>
-                    {selectedMember.status.toLowerCase() === 'active' ? t('online') : t('pending')}
+                    {selectedMember.status?.toLowerCase() === 'active' ? t('online') : t('pending')}
                   </span>
                 </div>
 
@@ -494,6 +531,10 @@ export default function Members() {
                     <p className="text-sm font-bold text-on-surface">{selectedMember.phone || '-'}</p>
                   </div>
                   <div className="bg-on-surface/5 p-4 rounded-2xl text-left col-span-2">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('address')}</p>
+                    <p className="text-sm font-bold text-on-surface break-words">{selectedMember.address || '-'}</p>
+                  </div>
+                  <div className="bg-on-surface/5 p-4 rounded-2xl text-left col-span-2">
                     <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('member_id')}</p>
                     <p className="text-sm font-bold text-on-surface">MEM-{selectedMember.id?.substring(0, 8).toUpperCase()}</p>
                   </div>
@@ -501,6 +542,14 @@ export default function Members() {
 
                 <div className="w-full mt-6 flex flex-col gap-3">
                   <div className="flex gap-4">
+                    {selectedMember.status === 'Pending' && (
+                      <button 
+                        onClick={() => handleApprove(selectedMember)}
+                        className="flex-1 py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
+                      >
+                        {t('approve_member')}
+                      </button>
+                    )}
                     <button 
                       onClick={() => { setEditForm(selectedMember); setIsEditing(true); }}
                       className="flex-1 py-3 border border-outline-variant rounded-xl text-sm font-bold text-on-surface hover:bg-on-surface/5 transition-all"
@@ -588,6 +637,15 @@ export default function Members() {
                     placeholder="+66 81 234 5678"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('address')}</label>
+                  <input 
+                    value={editForm.address || ''}
+                    onChange={e => setEditForm(prev => prev ? ({ ...prev, address: e.target.value }) : null)}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
+                    placeholder="123 Sukhumvit, Bangkok"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('member_tier')}</label>
@@ -613,6 +671,18 @@ export default function Members() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                <div className="space-y-1.5 pt-2">
+                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-on-surface/5 rounded-xl border border-outline-variant hover:border-primary/50 transition-all">
+                    <input 
+                      type="checkbox"
+                      checked={editForm.isAdmin}
+                      onChange={e => setEditForm(prev => prev ? ({ ...prev, isAdmin: e.target.checked }) : null)}
+                      className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">Grant Admin Permissions</span>
+                  </label>
                 </div>
                 
                 <div className="pt-4 flex gap-4">
@@ -835,12 +905,12 @@ export default function Members() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-surface-container border border-outline-variant/30 rounded-[2.5rem] shadow-sm overflow-hidden"
+        className="bg-surface-container border border-outline rounded-[3rem] shadow-sm overflow-hidden"
       >
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
-              <tr className="bg-on-surface/[0.03] sticky top-0 z-10 backdrop-blur-md">
+              <tr className="bg-on-surface/[0.01] border-b border-outline/50">
                 {[
                   { key: 'name', label: t('member') },
                   { key: 'role', label: t('member_tier') },
@@ -851,69 +921,79 @@ export default function Members() {
                   <th 
                     key={key}
                     onClick={() => handleSort(key as SortKey)}
-                    className="px-8 py-5 cursor-pointer hover:bg-on-surface/[0.05] transition-colors group"
+                    className="px-8 py-6 cursor-pointer hover:bg-on-surface/[0.03] transition-colors group relative"
                   >
-                    <div className="flex items-center gap-2 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.3em] opacity-40 group-hover:opacity-100 transition-all">
                       {label}
-                      <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity ${sortConfig.key === key ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-40'}`} />
+                      <ArrowUpDown className={`w-3.5 h-3.5 transition-all ${sortConfig.key === key ? 'opacity-100 text-primary scale-110' : 'opacity-0 group-hover:opacity-40'}`} />
                     </div>
                   </th>
                 ))}
-                <th className="px-8 py-5 text-center text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">{t('actions')}</th>
+                <th className="px-8 py-6 text-center text-[10px] font-black text-on-surface-variant uppercase tracking-[0.3em] opacity-40">{t('actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/10">
+            <tbody className="divide-y divide-outline/30">
               {filteredMembers.length > 0 ? (
                 filteredMembers.map((member, idx) => (
                   <motion.tr 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.02 + 0.3 }}
                     key={member.id || idx}
                     onClick={() => setSelectedMember(member)}
-                    className="hover:bg-on-surface/[0.02] transition-colors group cursor-pointer"
+                    className="hover:bg-on-surface/[0.02] transition-colors group cursor-pointer relative"
                   >
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-6">
+                        <div className="relative group/av">
                           <img 
                             src={member.avatar} 
-                            className="w-11 h-11 rounded-full object-cover border-2 border-surface shadow-md group-hover:scale-110 transition-transform duration-500" 
+                            className="w-12 h-12 rounded-2xl object-cover border border-outline shadow-md group-hover/av:shadow-xl transition-all duration-500 group-hover:scale-105" 
                             alt={member.name} 
                           />
-                          <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-surface shadow-sm ${
-                            member.status.toLowerCase() === 'active' ? 'bg-emerald-500' : 'bg-outline-variant'
-                          }`} />
+                          {member.status === 'Active' && (
+                            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-surface shadow-sm shadow-emerald-500/50" />
+                          )}
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors leading-tight mb-0.5">{member.name}</p>
-                          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider opacity-60">{member.email}</p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-black text-on-surface group-hover:text-primary transition-colors leading-tight tracking-tight">{member.name}</p>
+                            {member.isAdmin && (
+                              <BadgeCheck className="w-4 h-4 text-rose-500 fill-rose-500/10" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.1em] opacity-40">{member.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/10">
+                    <td className="px-8 py-6">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/[0.03] text-primary rounded-xl text-[10px] font-black uppercase tracking-widest border border-primary/10">
                         {member.role}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 border border-outline px-3 py-1 bg-on-surface/[0.02] rounded-xl hover:opacity-80 transition-opacity">
+                        {t(member.category?.toLowerCase()) || member.category}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-xs font-bold text-on-surface-variant opacity-80">{member.category}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                        member.status.toLowerCase() === 'active' 
+                    <td className="px-8 py-6">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl border ${
+                        member.status?.toLowerCase() === 'active' 
                           ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                           : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
                       }`}>
-                        {member.status.toLowerCase() === 'active' ? t('online') : t('pending')}
-                      </span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          member.status?.toLowerCase() === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-current'
+                        }`} />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em]">{member.status?.toLowerCase() === 'active' ? t('online') : t('pending')}</span>
+                      </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-sm font-bold font-heading text-on-surface tabular-nums">{member.joinDate}</p>
+                    <td className="px-8 py-6">
+                      <p className="text-[11px] font-mono font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 tabular-nums">{member.joinDate}</p>
                     </td>
-                    <td className="px-8 py-5 text-center">
-                      <button className="p-2 hover:bg-primary/10 hover:text-primary rounded-xl transition-all active:scale-90">
-                        <MoreVertical className="w-5 h-5" />
+                    <td className="px-8 py-6 text-center">
+                      <button className="p-3 hover:bg-primary/10 hover:text-primary rounded-2xl transition-all border border-outline shadow-sm active:scale-95 group/btn">
+                        <MoreVertical className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 transition-opacity" />
                       </button>
                     </td>
                   </motion.tr>
@@ -921,17 +1001,17 @@ export default function Members() {
               ) : (
                 <tr>
                   <td colSpan={6} className="px-8 py-24 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="h-20 w-20 rounded-full bg-on-surface/5 flex items-center justify-center">
-                        <Search className="w-10 h-10 text-on-surface-variant/40" />
+                    <div className="flex flex-col items-center gap-6">
+                      <div className="h-24 w-24 rounded-[2rem] bg-on-surface/[0.02] border border-outline flex items-center justify-center rotate-12">
+                        <Search className="w-10 h-10 text-on-surface-variant/20 -rotate-12" />
                       </div>
-                      <div>
-                        <p className="text-on-surface font-black text-xl font-heading uppercase tracking-tight">{t('no_results')}</p>
-                        <p className="text-on-surface-variant text-xs font-bold uppercase tracking-widest mt-1 opacity-60">Adjust your criteria or sweep all filters</p>
+                      <div className="space-y-2">
+                        <p className="text-on-surface font-black text-2xl font-heading uppercase tracking-[0.1em]">{t('query_null')}</p>
+                        <p className="text-on-surface-variant text-xs font-black uppercase tracking-[0.2em] opacity-40">Zero Member Correlation Analysis Failure.</p>
                       </div>
                       <button 
                         onClick={() => { setSearchQuery(''); setStatusFilter('All'); setRoleFilter('All'); setCategoryFilter('All'); }}
-                        className="px-6 py-2.5 bg-primary text-on-primary font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-primary-container transition-all shadow-lg shadow-primary/20"
+                        className="px-8 py-3.5 bg-primary text-on-primary font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:shadow-2xl hover:shadow-primary/20 transition-all active:scale-95"
                       >
                          {t('clear_all_filters')}
                       </button>

@@ -1,50 +1,59 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Manrope", sans-serif;
+  --font-heading: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-primary: #0059bb;
-  --color-primary-container: #0070ea;
+  --color-primary: #3b82f6;
+  --color-primary-container: #dbeafe;
   --color-on-primary: #ffffff;
   
-  --color-surface: #f8f9fa;
+  --color-surface: #fbfcff;
   --color-surface-container: #ffffff;
-  --color-on-surface: #191c1d;
-  --color-on-surface-variant: #414754;
+  --color-on-surface: #0f171c;
+  --color-on-surface-variant: #64748b;
   
-  --color-outline: #717786;
-  --color-outline-variant: #c1c6d7;
-  --color-mesh-accent: rgba(0, 89, 187, 0.05);
+  --color-outline: #e2e8f0;
+  --color-outline-variant: #f1f5f9;
+  --color-mesh-accent: rgba(59, 130, 246, 0.03);
 }
 
 .dark {
-  --color-primary: #adc7ff;
-  --color-primary-container: #004493;
-  --color-on-primary: #002e69;
+  --color-primary: #60a5fa;
+  --color-primary-container: #1e3a8a;
+  --color-on-primary: #ffffff;
 
-  --color-surface: #0f1115;
-  --color-surface-container: #1b1e25;
-  --color-on-surface: #ffffff;
-  --color-on-surface-variant: #d1d4db;
+  --color-surface: #020617;
+  --color-surface-container: #0f172a;
+  --color-on-surface: #f8fafc;
+  --color-on-surface-variant: #94a3b8;
 
-  --color-outline: #9ca3af;
-  --color-outline-variant: #43474e;
-  --color-mesh-accent: rgba(173, 199, 255, 0.05);
+  --color-outline: #1e293b;
+  --color-outline-variant: #334155;
+  --color-mesh-accent: rgba(96, 165, 250, 0.03);
 }
 
 @layer base {
   body {
-    @apply bg-surface text-on-surface font-sans transition-colors duration-300;
+    @apply bg-surface text-on-surface font-sans transition-colors duration-300 selection:bg-primary/20;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading font-semibold tracking-tight;
+    @apply font-heading tracking-tight;
+  }
+
+  .glass {
+    @apply backdrop-blur-md bg-surface-container/70 border border-outline/50;
   }
 }
 
 .bg-mesh {
   background: radial-gradient(at 0% 0%, var(--color-mesh-accent) 0px, transparent 50%),
               radial-gradient(at 100% 100%, var(--color-mesh-accent) 0px, transparent 50%);
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1;
 }

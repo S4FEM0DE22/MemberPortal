@@ -10,7 +10,7 @@ import Members from './views/Members';
 import Activities from './views/Activities';
 import { useApp } from './context/AppContext';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useApp();
   
   if (loading) {
@@ -28,6 +28,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAdmin, loading } = useApp();
+  
+  if (loading) return null;
+  if (!isAdmin) return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
@@ -37,14 +46,28 @@ export default function App() {
         <Route 
           path="/" 
           element={
-            <ProtectedRoute>
+            <AuthRoute>
               <Layout />
-            </ProtectedRoute>
+            </AuthRoute>
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="members" element={<Members />} />
-          <Route path="activities" element={<Activities />} />
+          <Route 
+            path="members" 
+            element={
+              <AdminRoute>
+                <Members />
+              </AdminRoute>
+            } 
+          />
+          <Route 
+            path="activities" 
+            element={
+              <AdminRoute>
+                <Activities />
+              </AdminRoute>
+            } 
+          />
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
         </Route>

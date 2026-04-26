@@ -11,7 +11,24 @@ import {
   signInWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, query, orderBy, getDocFromServer } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  doc, 
+  setDoc, 
+  query, 
+  orderBy, 
+  getDocFromServer, 
+  where,
+  serverTimestamp,
+  limit,
+  deleteDoc,
+  getDocs,
+  updateDoc,
+  writeBatch
+} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -72,13 +89,30 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 export interface Member {
   id?: string;
   name: string;
-  role: string;
+  role: string; // Now exclusively for Tiers: Standard, Silver, Gold, etc.
+  isAdmin?: boolean; // Separate flag for admin rights
   status: string;
   email: string;
   joinDate: string;
   avatar: string;
   category: string;
   phone?: string;
+  address?: string;
+  spending?: number;
+}
+
+export interface Activity {
+  id?: string;
+  title: string;
+  sub: string;
+  amount?: string;
+  status?: string;
+  time: string;
+  timestamp: any;
+  type: 'payment' | 'member' | 'system' | 'security' | 'notification' | 'profile';
+  description: string;
+  reference: string;
+  userId?: string;
 }
 
 interface AppContextType {
@@ -88,13 +122,19 @@ interface AppContextType {
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
   members: Member[];
+  activities: Activity[];
   addMember: (member: Member) => Promise<void>;
   updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
-  updateProfileData: (updates: { fullName?: string, photoURL?: string, phone?: string }) => Promise<void>;
+  updateProfileData: (updates: { fullName?: string, photoURL?: string, phone?: string, address?: string }) => Promise<void>;
   deleteMember: (id: string) => Promise<void>;
   bulkAddMembers: (members: Member[]) => Promise<void>;
   exportMembers: () => Promise<void>;
+  purchaseItem: (amount: number) => Promise<void>;
+  upgradeTier: (newRole: string, cost: number) => Promise<void>;
+  logActivity: (activity: Omit<Activity, 'id' | 'timestamp' | 'time'>) => Promise<void>;
   user: User | null;
+  isAdmin: boolean;
+  currentMember: Member | null;
   loading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
@@ -185,6 +225,7 @@ const translations = {
     invite_new: 'เชิญสมาชิกใหม่',
     invite_desc: 'ส่งคำเชิญเข้าร่วมระบบผ่านอีเมล',
     full_name: 'ชื่อ-นามสกุล',
+    address: 'ที่อยู่',
     email: 'อีเมล',
     cancel: 'ยกเลิก',
     send_invite: 'ส่งคำเชิญ',
@@ -194,6 +235,7 @@ const translations = {
     csv_format: 'รองรับรูปแบบ .csv (ชื่อ, อีเมล, ระดับ, สถานะ)',
     edit_info: 'แก้ไขข้อมูล',
     suspend_member: 'ระงับสมาชิก',
+    approve_member: 'อนุมัติสมาชิก',
     member_id: 'รหัสสมาชิก',
     search_placeholder: 'ค้นหาชื่อ, อีเมล หรือระดับสมาชิก...',
     name_placeholder: 'ป้อนชื่อสมาชิก',
@@ -252,6 +294,13 @@ const translations = {
     see_full_analytics: 'ดูบทวิเคราะห์ทั้งหมด',
     action_required: 'ต้องจัดการ',
     manage_now: 'จัดการตอนนี้',
+    account_verified: 'ยืนยันตัวตนสำเร็จ',
+    metrics_overview: 'ภาพรวมการติดตามเมทริกซ์',
+    quick_index: 'ดัชนีเข้าถึงด่วน',
+    query_null: 'ไม่พบข้อมูลการค้นหา',
+    net_contribution: 'ยอดรวมการสนับสนุน',
+    member_tier_distribution: 'สัดส่วนระดับสมาชิก',
+    operational_intelligence: 'ข้อมูลเชิงลึกการดำเนินงาน',
     no_account: "ยังไม่มีบัญชีใช่หรือไม่?",
     register_free: 'สมัครสมาชิกฟรี',
     start_journey: 'เริ่มต้นการเดินทางของคุณ',
@@ -277,6 +326,16 @@ const translations = {
     elevate_desc: 'เข้าถึงทรัพยากรพิเศษ จัดการสิทธิประโยชน์การเป็นสมาชิก และเชื่อมต่อกับผู้นำในอุตสาหกรรมในสภาพแวดล้อมที่เป็นโครงสร้างและมีประสิทธิภาพ',
     active_members: 'สมาชิกที่ใช้งานอยู่',
     daily_activities: 'กิจกรรมรายวัน',
+    spending: 'ยอดการใช้จ่าย',
+    shop: 'ร้านค้า',
+    buy_item: 'ซื้อสินค้า',
+    upgrade: 'อัปเกรดระดับ',
+    upgrade_to: 'อัปเกรดเป็น {role}',
+    purchase_success: 'ซื้อสินค้าสำเร็จ!',
+    upgrade_success: 'อัปเกรดระดับสำเร็จ!',
+    auto_upgrade_hint: 'ใช้จ่ายครบ {amount} เพื่ออัปเกรดเป็น {role}',
+    total_spent: 'ยอดรวมการใช้จ่าย',
+    shop_desc: 'สะสมยอดจากการซื้อสินค้าเพื่อเพิ่มระดับสมาชิก หรืออัปเกรดระดับได้ทันที',
     realtime_feed: 'ฟีดระบบเรียลไทม์',
     end_of_updates: 'สิ้นสุดการอัปเดตล่าสุด',
     days_ago: '{days} วันที่แล้ว',
@@ -379,6 +438,7 @@ const translations = {
     invite_new: 'Invite New Member',
     invite_desc: 'Send system invitation via email',
     full_name: 'Full Name',
+    address: 'Address',
     email: 'Email',
     cancel: 'Cancel',
     send_invite: 'Send Invitation',
@@ -388,6 +448,7 @@ const translations = {
     csv_format: 'Supports .csv format (Name, Email, Tier, Status)',
     edit_info: 'Edit Info',
     suspend_member: 'Suspend Member',
+    approve_member: 'Approve Member',
     member_id: 'Member ID',
     search_placeholder: 'Search name, email or tier...',
     name_placeholder: 'Enter member name',
@@ -446,6 +507,13 @@ const translations = {
     see_full_analytics: 'See Full Analytics',
     action_required: 'Action Required',
     manage_now: 'Manage Now',
+    account_verified: 'Account Verified',
+    metrics_overview: 'Metrics Tracking Overview',
+    quick_index: 'Log Quick Index',
+    query_null: 'LOG_QUERY_NULL',
+    net_contribution: 'Net Contribution',
+    member_tier_distribution: 'Member Tier Distribution',
+    operational_intelligence: 'Operational Intelligence',
     no_account: "Don't have an account?",
     register_free: 'Sign up for free',
     start_journey: 'Start Your Journey',
@@ -471,6 +539,16 @@ const translations = {
     elevate_desc: 'Access exclusive resources, manage membership benefits, and connect with industry leaders in a structured and efficient environment.',
     active_members: 'Active Members',
     daily_activities: 'Daily Activities',
+    spending: 'Spending',
+    shop: 'Shop',
+    buy_item: 'Buy Item',
+    upgrade: 'Upgrade Tier',
+    upgrade_to: 'Upgrade to {role}',
+    purchase_success: 'Purchase Successful!',
+    upgrade_success: 'Tier Upgraded Successfully!',
+    auto_upgrade_hint: 'Spend {amount} more to upgrade to {role}',
+    total_spent: 'Total Spent',
+    shop_desc: 'Accumulate spending from purchases to increase your tier, or upgrade directly.',
     realtime_feed: 'Real-time system feed',
     end_of_updates: 'End of recent updates',
     days_ago: '{days} days ago',
@@ -506,24 +584,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
   const [language, setLanguageState] = useState<Language>(() => (localStorage.getItem('language') as Language) || 'th');
   const [members, setMembers] = useState<Member[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [currentMember, setCurrentMember] = useState<Member | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isAdmin = currentMember?.isAdmin === true || user?.email === 'noppanun47@gmail.com';
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      if (!currentUser) {
+        setLoading(false);
+        setCurrentMember(null);
+      }
     });
 
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !user.email) return;
+
+    // Listener for CURRENT user's member document
+    const q = query(collection(db, 'members'), where('email', '==', user.email));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        setCurrentMember({ id: doc.id, ...doc.data() } as Member);
+      } else {
+        setCurrentMember(null);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firestore Error (Current Member): ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !isAdmin) {
       setMembers([]);
       return;
     }
 
+    // Only admins can subscribe to the full members list
     const q = query(collection(db, 'members'), orderBy('joinDate', 'desc'));
     const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
       const memberList: Member[] = [];
@@ -532,11 +639,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       setMembers(memberList);
     }, (error) => {
-      console.error("Firestore Error (Members List): ", error);
+      console.error("Firestore Error (Admin Members List): ", error);
     });
 
     return () => unsubscribeSnapshot();
-  }, [user]);
+  }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (!user) {
+      setActivities([]);
+      return;
+    }
+
+    // Admins see all, users see their own
+    let q = query(collection(db, 'activities'), orderBy('timestamp', 'desc'), limit(50));
+    if (!isAdmin) {
+      q = query(collection(db, 'activities'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'), limit(20));
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activityList: Activity[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        // Convert timestamp to relative time string
+        const ts = data.timestamp?.toDate ? data.timestamp.toDate() : new Date();
+        const diffMs = new Date().getTime() - ts.getTime();
+        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHrs / 24);
+        
+        let timeStr = 'Just now';
+        if (diffDays > 0) timeStr = `${diffDays} days ago`;
+        else if (diffHrs > 0) timeStr = `${diffHrs} hours ago`;
+
+        activityList.push({ id: doc.id, ...data, time: timeStr } as Activity);
+      });
+      setActivities(activityList);
+    }, (error) => {
+      console.error("Firestore Error (Activities): ", error);
+    });
+
+    return () => unsubscribe();
+  }, [user, isAdmin]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -552,6 +695,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
   const setLanguage = (lang: Language) => setLanguageState(lang);
 
+  const logActivity = async (activity: Omit<Activity, 'id' | 'timestamp' | 'time'>) => {
+    try {
+      await addDoc(collection(db, 'activities'), {
+        ...activity,
+        timestamp: serverTimestamp(),
+        userId: activity.userId || user?.uid || null
+      });
+    } catch (error) {
+      console.error("Error logging activity:", error);
+    }
+  };
+
   const signIn = async () => {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
@@ -559,21 +714,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Check if member already exists in Firestore for this user
     if (user.email) {
-      const { query, where, getDocs } = await import('firebase/firestore');
       const q = query(collection(db, 'members'), where('email', '==', user.email));
       const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
-        // First time Google login, create member record
-        await addDoc(collection(db, 'members'), {
+        const isPrimaryAdmin = user.email === 'noppanun47@gmail.com';
+        // First time Google login, create member record with user UID as document ID
+        await setDoc(doc(db, 'members', user.uid), {
           name: user.displayName || 'Google User',
           email: user.email,
           role: 'Standard',
-          status: 'Active',
+          isAdmin: isPrimaryAdmin,
+          status: isPrimaryAdmin ? 'Active' : 'Pending',
           joinDate: new Date().toISOString().split('T')[0],
           avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'GU')}&background=random`,
-          category: 'Other'
+          category: 'Other',
+          spending: 0,
+          userId: user.uid
         });
+        
+        await logActivity({
+          title: t('new_member_registered'),
+          sub: `${user.displayName || 'Google User'} joined Standard Tier`,
+          type: 'member',
+          description: `New member registered via Google sign-in. Status: ${isPrimaryAdmin ? 'Active' : 'Pending'}`,
+          reference: `MEM-${user.uid.substring(0, 8).toUpperCase()}`,
+          userId: user.uid
+        });
+      } else {
+        // Member exists. Check if ID matches UID. If not, "claim" it.
+        const existingDoc = querySnapshot.docs[0];
+        if (existingDoc.id !== user.uid) {
+          const data = existingDoc.data();
+          await setDoc(doc(db, 'members', user.uid), {
+            ...data,
+            userId: user.uid // Ensure UID is stored
+          });
+          await deleteDoc(doc(db, 'members', existingDoc.id));
+          
+          await logActivity({
+            title: t('account_verified'),
+            sub: `Account linked to UID`,
+            type: 'system',
+            description: `Manual member record linked to authenticated user UID.`,
+            reference: `LNK-${user.uid.substring(0, 8).toUpperCase()}`,
+            userId: user.uid
+          });
+        } else if (!existingDoc.data().userId) {
+          // Just ensure userId field is present
+          await setDoc(doc(db, 'members', user.uid), { userId: user.uid }, { merge: true });
+        }
       }
     }
   };
@@ -584,7 +774,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const signUpWithEmail = async (email: string, pass: string, name: string) => {
     // Check if member already exists first
-    const { query, where, getDocs } = await import('firebase/firestore');
     const q = query(collection(db, 'members'), where('email', '==', email));
     const querySnapshot = await getDocs(q);
     
@@ -595,15 +784,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(userCredential.user, { displayName: name });
     
-    // Create member record
-    await addDoc(collection(db, 'members'), {
+    const isPrimaryAdmin = email === 'noppanun47@gmail.com';
+    // Create member record with user UID as document ID
+    await setDoc(doc(db, 'members', userCredential.user.uid), {
       name,
       email,
       role: 'Standard',
-      status: 'Active',
+      isAdmin: isPrimaryAdmin,
+      status: isPrimaryAdmin ? 'Active' : 'Pending',
       joinDate: new Date().toISOString().split('T')[0],
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-      category: 'Other'
+      category: 'Other',
+      spending: 0
+    });
+
+    await logActivity({
+      title: t('new_member_registered'),
+      sub: `${name} joined Standard Tier`,
+      type: 'member',
+      description: `New member registered with email/password. Status: ${isPrimaryAdmin ? 'Active' : 'Pending'}`,
+      reference: `MEM-${userCredential.user.uid.substring(0, 8).toUpperCase()}`,
+      userId: userCredential.user.uid
     });
   };
 
@@ -613,7 +814,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addMember = async (member: Member) => {
     try {
-      await addDoc(collection(db, 'members'), member);
+      // For manually added members by admin, we still use addDoc (random ID)
+      // but ensure spending and isAdmin (default false) are present
+      const docRef = await addDoc(collection(db, 'members'), {
+        ...member,
+        spending: member.spending || 0,
+        isAdmin: member.isAdmin || false
+      });
+
+      await logActivity({
+        title: t('invite_new'),
+        sub: `${member.name} added by Admin`,
+        type: 'member',
+        description: `New member manually added to ${member.role} Tier.`,
+        reference: `MEM-${docRef.id.substring(0, 8).toUpperCase()}`
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'members');
     }
@@ -622,12 +837,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateMember = async (id: string, updates: Partial<Member>) => {
     try {
       await setDoc(doc(db, 'members', id), updates, { merge: true });
+      
+      const changedFields = Object.keys(updates).join(', ');
+      let activityTitle = t('profile_updated');
+      let activitySub = `Member ${id.substring(0, 8)} updated`;
+
+      if (updates.status === 'Active' && !updates.name) {
+        activityTitle = t('approved_request');
+        activitySub = `Member ${id.substring(0, 8)} approved`;
+      } else if (updates.status === 'Suspended') {
+        activityTitle = t('suspend_member');
+        activitySub = `Member ${id.substring(0, 8)} suspended`;
+      }
+
+      await logActivity({
+        title: activityTitle,
+        sub: activitySub,
+        type: 'member',
+        description: `Admin updated member: ${changedFields}`,
+        reference: `UPD-${id.substring(0, 8).toUpperCase()}`
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `members/${id}`);
     }
   };
 
-  const updateProfileData = async (updates: { fullName?: string, photoURL?: string, phone?: string }) => {
+  const updateProfileData = async (updates: { fullName?: string, photoURL?: string, phone?: string, address?: string }) => {
     if (!user || !user.email) return;
 
     try {
@@ -642,7 +877,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 2. Update Firestore Member Record (if exists)
-      const { query, where, getDocs, updateDoc } = await import('firebase/firestore');
       const q = query(collection(db, 'members'), where('email', '==', user.email));
       const querySnapshot = await getDocs(q);
       
@@ -652,8 +886,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (updates.fullName) firestoreUpdates.name = updates.fullName;
         if (updates.photoURL) firestoreUpdates.avatar = updates.photoURL;
         if (updates.phone) firestoreUpdates.phone = updates.phone;
+        if (updates.address) firestoreUpdates.address = updates.address;
         
         await updateDoc(doc(db, 'members', memberId), firestoreUpdates);
+
+        await logActivity({
+          title: t('profile_updated'),
+          sub: `${updates.fullName || user.displayName || user.email} updated profile`,
+          type: 'profile',
+          description: `User updated personal profile details: ${Object.keys(updates).join(', ')}`,
+          reference: `PRF-${memberId.substring(0, 8).toUpperCase()}`,
+          userId: user.uid
+        });
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'profile_sync');
@@ -662,8 +906,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteMember = async (id: string) => {
     try {
-      const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, 'members', id));
+
+      await logActivity({
+        title: t('delete_member'),
+        sub: `Member ${id.substring(0, 8)} removed`,
+        type: 'member',
+        description: 'Admin deleted a member record from the system.',
+        reference: `DEL-${id.substring(0, 8).toUpperCase()}`
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `members/${id}`);
     }
@@ -671,7 +922,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const bulkAddMembers = async (newMembers: Member[]) => {
     try {
-      const { writeBatch } = await import('firebase/firestore');
       const batch = writeBatch(db);
       newMembers.forEach(m => {
         const newDocRef = doc(collection(db, 'members'));
@@ -698,6 +948,88 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.body.removeChild(link);
   };
 
+  const TIER_HIERARCHY = ['Standard', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Founder'];
+
+  const purchaseItem = async (amount: number) => {
+    if (!user || !user.email) return;
+    
+    try {
+      const q = query(collection(db, 'members'), where('email', '==', user.email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const memberDoc = querySnapshot.docs[0];
+        const memberData = memberDoc.data() as Member;
+        const currentSpending = memberData.spending || 0;
+        const newSpending = currentSpending + amount;
+        
+        let newRole = memberData.role;
+        
+        // Auto-upgrade logic based on spending (Don't change isAdmin here)
+        if (newSpending >= 50000) newRole = 'Founder';
+        else if (newSpending >= 20000) newRole = 'Diamond';
+        else if (newSpending >= 10000) newRole = 'Platinum';
+        else if (newSpending >= 5000) newRole = 'Gold';
+        else if (newSpending >= 1000) newRole = 'Silver';
+
+        // Update preserving isAdmin status
+        await updateDoc(doc(db, 'members', memberDoc.id), {
+          spending: newSpending,
+          role: newRole,
+          // Re-affirm admin status if it's the owner email
+          isAdmin: memberData.isAdmin || user.email === 'noppanun47@gmail.com'
+        });
+
+        await logActivity({
+          title: t('payment'),
+          sub: `Purchase: ฿${amount.toLocaleString()}`,
+          amount: `฿${amount.toLocaleString()}`,
+          type: 'payment',
+          description: `Successful item purchase. Current Tier: ${newRole}`,
+          reference: `PUR-${Math.random().toString(36).substring(7).toUpperCase()}`,
+          userId: user.uid
+        });
+
+        if (newRole !== memberData.role) {
+          await logActivity({
+            title: t('upgrade'),
+            sub: `Upgraded to ${newRole}`,
+            type: 'member',
+            description: `Member auto-upgraded due to spending reaching ฿${newSpending.toLocaleString()}`,
+            reference: `UPG-${memberDoc.id.substring(0, 8).toUpperCase()}`,
+            userId: user.uid
+          });
+        }
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'purchase_item');
+    }
+  };
+
+  const upgradeTier = async (newRole: string, cost: number) => {
+    if (!user || !user.email) return;
+
+    try {
+      const q = query(collection(db, 'members'), where('email', '==', user.email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const memberDoc = querySnapshot.docs[0];
+        const memberData = memberDoc.data() as Member;
+        const currentSpending = memberData.spending || 0;
+        
+        await updateDoc(doc(db, 'members', memberDoc.id), {
+          spending: currentSpending + cost,
+          role: newRole,
+          // Force admin back if they were an admin
+          isAdmin: memberData.isAdmin || user.email === 'noppanun47@gmail.com'
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'upgrade_tier');
+    }
+  };
+
   const t = (key: string) => {
     return translations[language][key as keyof typeof translations['en']] || key;
   };
@@ -710,6 +1042,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLanguage, 
       t, 
       members, 
+      activities,
       addMember, 
       updateMember,
       updateProfileData,
@@ -717,11 +1050,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       bulkAddMembers,
       exportMembers,
       user,
+      isAdmin,
+      currentMember,
       loading,
       signIn,
       signInWithEmail,
       signUpWithEmail,
-      logout
+      logout,
+      purchaseItem,
+      upgradeTier,
+      logActivity
     }}>
       {children}
     </AppContext.Provider>

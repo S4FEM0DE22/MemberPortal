@@ -10,8 +10,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
     }
 
     function incoming() {
@@ -22,6 +22,20 @@ service cloud.firestore {
       return resource.data;
     }
 
+    // Helper to check if the current user is an admin
+    // We check the 'members' collection for a document where isAdmin is true and email matches request.auth.token.email
+    // Note: Since we use random IDs, we can't use get(/members/$(uid)).
+    // However, for the 'owner' email, we bypass to avoid recursive lookup issues if possible, 
+    // but rules don't support simple loops. 
+    // Best practice: The system owner is hardcoded or checked via a specific path.
+    function isSystemAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'noppanun47@gmail.com' ||
+        (exists(/databases/$(database)/documents/members/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/members/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+
     // --- Members Collection ---
     match /members/{memberId} {
       function isValidMember(data) {
@@ -30,33 +44,49 @@ service cloud.firestore {
                data.email is string && data.email.size() <= 100 &&
                data.status in ['Active', 'Pending', 'Suspended'] &&
                data.role is string && data.role.size() <= 100 &&
-               data.joinDate is string && data.joinDate.size() <= 20 &&
-               data.avatar is string && data.avatar.size() <= 1000 &&
+               data.joinDate is string && data.joinDate.size() <= 50 &&
+               data.avatar is string && data.avatar.size() <= 2000 &&
                data.category is string && data.category.size() <= 100 &&
-               (!('phone' in data) || (data.phone is string && data.phone.size() <= 20));
+               (!('isAdmin' in data) || data.isAdmin is bool) &&
+               (!('spending' in data) || (data.spending is number)) &&
+               (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
+               (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+               (!('userId' in data) || (data.userId is string));
+      }
+
+      function isOwner(email) {
+        return isSignedIn() && request.auth.token.email == email;
       }
 
       allow read: if isSignedIn();
       
       allow create: if isSignedIn() && isValidMember(incoming());
 
-      allow update: if isSignedIn() && 
-                    isValidMember(incoming()) && 
-                    incoming().email == existing().email; // Preserve identity
+      allow update: if isSignedIn() && (
+        isSystemAdmin() || 
+        (isOwner(existing().email) && 
+         isValidMember(incoming()) && 
+         incoming().email == existing().email &&
+         incoming().isAdmin == existing().isAdmin && // Users cannot make themselves admin
+         incoming().status == existing().status)      // Users cannot approve themselves
+      );
 
-      allow delete: if isSignedIn();
+      allow delete: if isSystemAdmin();
     }
 
     // --- Activities Collection ---
     match /activities/{activityId} {
       function isValidActivity(data) {
         return data.title is string && data.title.size() <= 200 &&
-               data.description is string && data.description.size() <= 1000 &&
-               data.reference is string && data.reference.size() <= 50;
+               (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+               (!('reference' in data) || (data.reference is string && data.reference.size() <= 100)) &&
+               (!('amount' in data) || (data.amount is string)) &&
+               (!('sub' in data) || (data.sub is string));
       }
 
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidActivity(incoming());
+      allow read: if isSignedIn() && (isSystemAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidActivity(incoming()) && (incoming().userId == request.auth.uid || isSystemAdmin());
+      allow update, delete: if isSystemAdmin();
     }
   }
 }

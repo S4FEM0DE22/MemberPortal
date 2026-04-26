@@ -6,20 +6,35 @@ import { useApp } from '../context/AppContext';
 import { updateProfile } from 'firebase/auth';
 
 export default function Profile() {
-  const { t, user, updateProfileData, members } = useApp();
-  const currentMember = members.find(m => m.email === user?.email);
+  const { t, user, updateProfileData, currentMember, purchaseItem, upgradeTier } = useApp();
   
   const [formData, setFormData] = useState({
     fullName: user?.displayName || "",
-    phone: currentMember?.phone || user?.phoneNumber || "+1 (555) 0123-4567",
+    phone: currentMember?.phone || user?.phoneNumber || "",
+    address: currentMember?.address || "",
     email: user?.email || ""
   });
+
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePurchase = async (amount: number) => {
+    setIsProcessing(true);
+    await purchaseItem(amount);
+    setIsProcessing(false);
+  };
+
+  const handleUpgrade = async (role: string, cost: number) => {
+    setIsProcessing(true);
+    await upgradeTier(role, cost);
+    setIsProcessing(false);
+  };
 
   useEffect(() => {
     if (user) {
       setFormData({
         fullName: user.displayName || "",
-        phone: currentMember?.phone || user.phoneNumber || "+1 (555) 0123-4567",
+        phone: currentMember?.phone || user.phoneNumber || "",
+        address: currentMember?.address || "",
         email: user.email || ""
       });
       setAvatarUrl(user.photoURL || "https://lh3.googleusercontent.com/aida-public/AB6AXuC9oFhmFaa1uZBlTYMdM_doiRJ-D_1BT1K8HBEtU1uP3Rsffzr2uJ3_XzEBQfuCDX8aem149cLYHiUgcfVtFm9LfULHbm7qnZUjBdpo_bWxIhEZuuEjsBJllfYoWLtG-n-N7NpFZlDo9l-K16wrFggc6ip4xZ0C9Qpa76Gntr9Wb7d_nuB_RwoPfJFy3qniXF9_XXB-7oz6uu7VzZTesvjtdpzkTDdO66mOOZwrT_gvr8PPcowHjH2nQILam5V77pO20QZexzsUtxag");
@@ -69,7 +84,8 @@ export default function Profile() {
       await updateProfileData({
         fullName: formData.fullName,
         photoURL: avatarUrl,
-        phone: formData.phone
+        phone: formData.phone,
+        address: formData.address
       });
       setIsSaving(false);
       setShowSavedMsg(true);
@@ -159,6 +175,14 @@ export default function Profile() {
             </div>
             
             <div className="flex flex-wrap justify-center md:justify-start gap-3">
+              {currentMember?.isAdmin && (
+                <div className="px-4 py-2 bg-rose-500/10 rounded-xl flex items-center gap-2 border border-rose-500/20 hover:bg-rose-500/20 transition-colors">
+                  <BadgeCheck className="w-4 h-4 text-rose-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
+                    Administrator
+                  </span>
+                </div>
+              )}
               <div className="px-4 py-2 bg-on-surface/[0.05] rounded-xl flex items-center gap-2 border border-outline-variant/20 hover:bg-on-surface/[0.08] transition-colors">
                  <div className="w-2 h-2 rounded-full bg-primary" />
                  <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
@@ -217,8 +241,20 @@ export default function Profile() {
                     onChange={handleInputChange}
                     className="w-full h-14 px-5 rounded-2xl border border-outline-variant/40 focus:border-primary focus:ring-1 focus:ring-primary text-sm font-bold bg-surface-container text-on-surface transition-all outline-none" 
                     type="tel" 
+                    placeholder="+1 (555) 000-0000"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-on-surface-variant block ml-1 uppercase tracking-[0.2em]">{t('address')}</label>
+                <input 
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="w-full h-14 px-5 rounded-2xl border border-outline-variant/40 focus:border-primary focus:ring-1 focus:ring-primary text-sm font-bold bg-surface-container text-on-surface transition-all outline-none" 
+                  type="text" 
+                  placeholder="123 Sukhumvit, Bangkok"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-on-surface-variant block ml-1 uppercase tracking-[0.2em]">{t('email')}</label>
@@ -257,6 +293,91 @@ export default function Profile() {
               </div>
             </form>
           </div>
+
+          {/* Shop Section */}
+          <div className="bg-surface-container p-8 md:p-12 rounded-[3.5rem] border border-outline-variant/30 shadow-sm space-y-10">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl text-on-surface font-heading font-black uppercase tracking-tight">{t('shop')}</h2>
+                  <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60">{t('shop_desc')}</p>
+                </div>
+              </div>
+              <div className="hidden sm:block text-right">
+                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 mb-1">{t('total_spent')}</p>
+                <p className="text-xl font-black text-primary font-heading tracking-tight">฿{(currentMember?.spending || 0).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { name: 'Professional Consultation', price: 1500, icon: BadgeCheck, color: 'text-primary', bg: 'bg-primary/10' },
+                { name: 'Premium Resource Pack', price: 500, icon: Info, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { name: 'Event VIP Ticket', price: 2500, icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+              ].map((item) => (
+                <div key={item.name} className="p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 flex flex-col justify-between group hover:border-primary/30 transition-all">
+                  <div>
+                    <div className={`w-12 h-12 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform`}>
+                      <item.icon className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-black text-on-surface text-sm leading-tight mb-1">{item.name}</h4>
+                    <p className="text-lg font-black text-primary font-heading tracking-tight">฿{item.price.toLocaleString()}</p>
+                  </div>
+                  <button 
+                    onClick={() => handlePurchase(item.price)}
+                    disabled={isProcessing}
+                    className="mt-6 w-full py-3 bg-surface border border-outline-variant/40 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isProcessing ? t('processing') : t('buy_item')}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-10 border-t border-outline-variant/10">
+               <h3 className="text-xl font-heading font-black uppercase tracking-tight mb-8 text-on-surface flex items-center gap-2">
+                 <ShieldCheck className="w-6 h-6 text-primary" />
+                 {t('upgrade')}
+               </h3>
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {[
+                   { role: 'Silver', cost: 1000, color: 'text-slate-400', bg: 'bg-slate-400/10' },
+                   { role: 'Gold', cost: 5000, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                   { role: 'Platinum', cost: 10000, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
+                   { role: 'Diamond', cost: 20000, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
+                   { role: 'Founder', cost: 50000, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                 ].map((tier) => {
+                   const isCurrent = currentMember?.role === tier.role;
+                   return (
+                     <div key={tier.role} className={`p-8 rounded-[3rem] border transition-all relative overflow-hidden group ${isCurrent ? 'bg-primary border-primary shadow-2xl shadow-primary/30' : 'bg-on-surface/[0.03] border-outline-variant/10 hover:border-primary/20'}`}>
+                        {isCurrent && (
+                          <div className="absolute top-4 right-4 bg-white/20 p-1.5 rounded-full scale-110">
+                            <CheckCircle2 className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                        <h4 className={`text-2xl font-black font-heading tracking-tight mb-1 ${isCurrent ? 'text-white' : 'text-on-surface'}`}>{tier.role}</h4>
+                        <p className={`text-lg font-bold ${isCurrent ? 'text-white/80' : 'text-primary'}`}>฿{tier.cost.toLocaleString()}</p>
+                        
+                        <button 
+                          onClick={() => handleUpgrade(tier.role, tier.cost)}
+                          disabled={isProcessing || isCurrent}
+                          className={`mt-8 w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 ${
+                            isCurrent 
+                              ? 'bg-white/20 text-white cursor-default' 
+                              : 'bg-primary text-on-primary hover:bg-primary-container shadow-xl shadow-primary/10'
+                          }`}
+                        >
+                          {isCurrent ? t('active') : t('upgrade_to').replace('{role}', tier.role)}
+                        </button>
+                     </div>
+                   );
+                 })}
+               </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Sidebar Info Cards */}
@@ -286,6 +407,13 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary opacity-50" />
                   <p className="font-black text-on-surface text-lg font-heading">{currentMember?.joinDate || t('member_since_date')}</p>
+                </div>
+              </div>
+              <div className="p-6 bg-on-surface/[0.03] rounded-[2rem] border border-outline-variant/10">
+                <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-[0.3em] block mb-2 opacity-60">{t('total_spent')}</label>
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5 text-primary opacity-50" />
+                  <p className="font-black text-on-surface text-lg font-heading tracking-tight">฿{(currentMember?.spending || 0).toLocaleString()}</p>
                 </div>
               </div>
               <div className="p-6 bg-on-surface/[0.03] rounded-[2rem] border border-outline-variant/10">

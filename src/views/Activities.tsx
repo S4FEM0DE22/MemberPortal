@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   CreditCard, 
@@ -19,24 +19,42 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function Activities() {
-  const { t } = useApp();
+  const { t, activities: realActivities } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
 
-  const activities = [
-    { id: 1, title: `${t('renewal_payment')}: Sarah Jenkins`, sub: t('annual_gold'), amount: '฿8,500', time: `2 ${t('hours_ago')}`, icon: CreditCard, iconBg: 'bg-primary/10', iconColor: 'text-primary', description: 'Annual gold membership renewal payment processed successfully via Stripe.', reference: 'TRX-9921-X' },
-    { id: 2, title: t('approved_request'), sub: `David Miller • ${t('professional_tier')}`, status: t('certified'), time: `5 ${t('hours_ago')}`, icon: BadgeCheck, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', description: 'Member tier upgrade request approved by automatic review system.', reference: 'REQ-4482-B' },
-    { id: 3, title: t('profile_updated'), sub: `Emily Watson • ${t('profile_desc_short')}`, time: t('yesterday'), icon: FileEdit, iconBg: 'bg-orange-500/10', iconColor: 'text-orange-500', description: 'Member updated their profile information including address and contact details.', reference: 'LOG-1102-Z' },
-    { id: 4, title: t('new_member_registered'), sub: `John Doe joined ${t('standard_tier')}`, time: t('yesterday'), icon: UserPlus, iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500', description: 'New member registered to the system via the main landing page.', reference: 'MEM-3301-A' },
-    { id: 5, title: t('subscription_cancelled'), sub: 'Michael Chen • Monthly Plan', time: t('days_ago').replace('{days}', '2'), icon: FileEdit, iconBg: 'bg-red-500/10', iconColor: 'text-red-500', description: 'Member requested to cancel their monthly subscription plan.', reference: 'CAN-5591-C' },
-    { id: 6, title: t('payment_failed'), sub: `Amy Liu • ${t('gold_tier')}`, amount: '฿650', time: t('days_ago').replace('{days}', '3'), icon: CreditCard, iconBg: 'bg-red-500/10', iconColor: 'text-red-500', description: 'Payment failed due to expired credit card information.', reference: 'ERR-7721-F' },
-    { id: 7, title: t('system_maintenance'), sub: 'Server clusters optimized', time: t('days_ago').replace('{days}', '4'), icon: BadgeCheck, iconBg: 'bg-on-surface/5', iconColor: 'text-on-surface-variant', description: 'Weekly database performance optimization and system maintenance.', reference: 'SYS-001-K' },
-    { id: 8, title: t('new_admin_added'), sub: 'Sophia Brown granted dashboard access', time: t('days_ago').replace('{days}', '5'), icon: UserPlus, iconBg: 'bg-purple-500/10', iconColor: 'text-purple-500', description: 'New admin access granted to the system dashboard.', reference: 'ADM-8821-S' },
-  ];
+  const processedActivities = useMemo(() => {
+    return realActivities.map(act => {
+      let icon = FileEdit;
+      let iconBg = 'bg-primary/10';
+      let iconColor = 'text-primary';
 
-  const filteredActivities = activities.filter(act => 
-    act.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    act.sub.toLowerCase().includes(searchQuery.toLowerCase())
+      if (act.type === 'payment') {
+        icon = CreditCard;
+        iconBg = 'bg-primary/10';
+        iconColor = 'text-primary';
+      } else if (act.type === 'member') {
+        icon = BadgeCheck;
+        iconBg = 'bg-emerald-500/10';
+        iconColor = 'text-emerald-500';
+      } else if (act.type === 'profile') {
+        icon = FileEdit;
+        iconBg = 'bg-orange-500/10';
+        iconColor = 'text-orange-500';
+      } else if (act.type === 'system') {
+        icon = BadgeCheck;
+        iconBg = 'bg-on-surface/5';
+        iconColor = 'text-on-surface-variant';
+      }
+
+      return { ...act, icon, iconBg, iconColor };
+    });
+  }, [realActivities]);
+
+  const filteredActivities = processedActivities.filter(act => 
+    act.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    act.sub?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    act.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -142,84 +160,114 @@ export default function Activities() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3 space-y-4">
-          <AnimatePresence mode="popLayout">
-            {filteredActivities.map((act, idx) => {
-              const Icon = act.icon;
-              return (
-                <motion.div 
-                  key={act.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: idx * 0.05 }}
-                  onClick={() => setSelectedActivity(act)}
-                  className="bg-surface-container border border-outline-variant/30 rounded-2xl p-6 flex items-center gap-6 hover:bg-on-surface/5 transition-all group cursor-pointer"
-                >
-                  <div className={`h-14 w-14 rounded-2xl ${act.iconBg} flex items-center justify-center transition-transform group-hover:scale-110`}>
-                    <Icon className={`${act.iconColor} w-7 h-7`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-lg font-bold text-on-surface truncate">{act.title}</p>
-                      {act.status && (
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[10px] font-black rounded uppercase tracking-widest border border-emerald-500/20">
-                          {act.status}
-                        </span>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+        <div className="lg:col-span-3">
+          {/* Technical Data Header */}
+          <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-4 border-b border-outline/50 mb-4 items-center">
+            <div className="col-span-1 text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Class</div>
+            <div className="col-span-6 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 pl-4 text-left">Activity / Identification</div>
+            <div className="col-span-3 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-right">Value / Status</div>
+            <div className="col-span-2 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-right pr-4">Timestamp</div>
+          </div>
+
+          <div className="space-y-[1px] bg-outline/20 border border-outline/50 rounded-3xl overflow-hidden shadow-2xl shadow-primary/5">
+            <AnimatePresence mode="popLayout">
+              {filteredActivities.map((act, idx) => {
+                const Icon = act.icon;
+                return (
+                  <motion.div 
+                    key={act.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ delay: idx * 0.03 }}
+                    onClick={() => setSelectedActivity(act)}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-4 px-8 py-6 bg-surface-container hover:bg-on-surface/[0.03] transition-all group cursor-pointer items-center relative"
+                  >
+                    <div className="md:col-span-1 flex justify-center">
+                      <div className={`h-12 w-12 rounded-xl ${act.iconBg} flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner`}>
+                        <Icon className={`${act.iconColor} w-6 h-6`} />
+                      </div>
+                    </div>
+                    
+                    <div className="md:col-span-6 flex flex-col justify-center min-w-0 md:pl-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-base font-bold text-on-surface truncate tracking-tight">{act.title}</h3>
+                        {act.status && (
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[9px] font-black rounded uppercase tracking-widest border border-emerald-500/20 leading-none">
+                            {act.status}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant font-mono tracking-tight opacity-50 uppercase">{act.reference}</p>
+                    </div>
+
+                    <div className="md:col-span-3 flex md:flex-col items-center md:items-end justify-between md:justify-center gap-1">
+                      {act.amount ? (
+                        <p className="text-lg font-black text-on-surface font-mono tracking-tighter tabular-nums leading-none">{act.amount}</p>
+                      ) : (
+                        <div className="px-2.5 py-1 bg-on-surface/5 rounded-lg text-[9px] font-black uppercase tracking-widest text-on-surface-variant opacity-60">SYSTEM_LOG</div>
                       )}
+                      <p className="md:hidden text-xs text-on-surface-variant font-medium">{act.sub}</p>
                     </div>
-                    <p className="text-sm text-on-surface-variant font-medium">{act.sub}</p>
-                  </div>
-                  <div className="text-right flex flex-col items-end gap-2">
-                    {act.amount && <p className="text-lg font-black text-on-surface">{act.amount}</p>}
-                    <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant font-black uppercase tracking-widest bg-on-surface/5 px-2 py-1 rounded-md">
-                      <Calendar className="w-3 h-3" />
-                      {act.time}
+
+                    <div className="md:col-span-2 flex flex-col items-end gap-1.5 md:pr-4">
+                      <div className="flex items-center gap-2 text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none">
+                        {act.time}
+                      </div>
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
                     </div>
-                  </div>
-                  <div className="pl-4 border-l border-outline-variant/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRight className="w-5 h-5 text-primary" />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
           
           {filteredActivities.length === 0 && (
-            <div className="py-20 text-center space-y-4 opacity-50">
-              <Search className="w-16 h-16 mx-auto" />
-              <p className="text-xl font-heading">{t('no_results')}</p>
+            <div className="py-24 text-center space-y-6 bg-surface-container rounded-3xl border border-outline/50 shadow-sm">
+              <div className="w-20 h-20 bg-on-surface/5 rounded-full flex items-center justify-center mx-auto opacity-20">
+                <Search className="w-10 h-10" />
+              </div>
+              <div>
+                <p className="text-xl font-heading font-black uppercase tracking-[0.1em] text-on-surface opacity-40">{t('query_null')}</p>
+                <p className="text-sm text-on-surface-variant mt-2 opacity-50">No activity logs matching current filter parameters.</p>
+              </div>
             </div>
           )}
         </div>
 
-        <aside className="space-y-6">
-          <div className="bg-primary/5 border border-primary/10 rounded-[2rem] p-8 space-y-6">
-            <h3 className="text-xl text-on-surface font-heading uppercase tracking-tight">{t('summary_movement')}</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant font-bold uppercase tracking-widest text-[10px]">{t('this_week')}</span>
-                <span className="text-primary font-black">+42</span>
+        <aside className="space-y-8">
+          <div className="bg-primary/[0.02] border border-primary/20 rounded-[3rem] p-10 space-y-8 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-primary/10 transition-colors" />
+            <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em] relative z-10">{t('metrics_overview')}</h3>
+            <div className="space-y-6 relative z-10">
+              <div className="space-y-3">
+                <div className="flex justify-between items-end">
+                  <span className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px] opacity-60">Weekly Throughput</span>
+                  <span className="text-primary font-mono font-black text-sm">+42.8%</span>
+                </div>
+                <div className="w-full bg-on-surface/[0.06] h-2 rounded-full overflow-hidden p-[1px]">
+                  <motion.div initial={{ width: 0 }} animate={{ width: '74%' }} className="bg-primary h-full rounded-full" />
+                </div>
               </div>
-              <div className="w-full bg-on-surface/5 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full rounded-full w-3/4" />
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant font-bold uppercase tracking-widest text-[10px]">{t('success_trans')}</span>
-                <span className="text-emerald-500 font-black">98%</span>
-              </div>
-              <div className="w-full bg-on-surface/5 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full w-[98%]" />
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-end">
+                  <span className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px] opacity-60">Latency Success</span>
+                  <span className="text-emerald-500 font-mono font-black text-sm">99.2%</span>
+                </div>
+                <div className="w-full bg-on-surface/[0.06] h-2 rounded-full overflow-hidden p-[1px]">
+                  <motion.div initial={{ width: 0 }} animate={{ width: '99.2%' }} className="bg-emerald-500 h-full rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-container border border-outline-variant/30 rounded-[2rem] p-8">
-            <h3 className="text-xl text-on-surface font-heading uppercase tracking-tight mb-4">{t('quick_filter')}</h3>
-            <div className="flex flex-wrap gap-2">
+          <div className="bg-surface-container border border-outline rounded-[3rem] p-10 shadow-sm">
+            <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em] mb-6">{t('quick_index')}</h3>
+            <div className="flex flex-wrap gap-3">
               {[t('payment'), t('new_member'), t('system'), t('security'), t('notification')].map(tag => (
-                <button key={tag} className="px-4 py-2 rounded-xl border border-outline-variant text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all active:scale-95">
+                <button key={tag} className="px-5 py-3 rounded-2xl border border-outline text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95 shadow-sm">
                   {tag}
                 </button>
               ))}
