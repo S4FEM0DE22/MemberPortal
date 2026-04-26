@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sliders, Shield, AlertTriangle, Info, Calendar, CheckCircle2 } from 'lucide-react';
+import { Sliders, Shield, AlertTriangle, Info, Calendar, CheckCircle2, Lock, Smartphone, Key, Globe, Bell, Trash2, ChevronRight, Moon, Sun, Languages, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,7 @@ export default function Settings() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [showPwdSuccess, setShowPwdSuccess] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
+  const [show2FAModal, setShow2FAModal] = useState(false);
   const navigate = useNavigate();
 
   const isGoogleUser = user?.providerData.some(p => p.providerId === 'google.com');
@@ -62,14 +63,14 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12 pb-20">
+    <div className="max-w-5xl mx-auto space-y-12 pb-20 text-left">
       <AnimatePresence>
         {showPwdSuccess && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2"
+            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className="fixed top-24 left-1/2 z-[100] bg-emerald-500 text-white px-8 py-4 rounded-full shadow-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3"
           >
             <CheckCircle2 className="w-5 h-5" />
             {t('pwd_update_success')}
@@ -77,217 +78,261 @@ export default function Settings() {
         )}
       </AnimatePresence>
 
-      <header>
-        <h1 className="text-4xl md:text-5xl text-on-surface font-heading font-extrabold tracking-tight underline decoration-primary/20 decoration-8 underline-offset-8 lowercase first-letter:uppercase">{t('settings')}</h1>
-        <p className="text-on-surface-variant font-medium mt-6 max-w-md">{t('settings_desc')}</p>
+      <header className="text-left">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-1 w-8 bg-primary rounded-full" />
+          <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{t('system')}</p>
+        </div>
+        <h1 className="text-4xl md:text-5xl text-on-surface font-heading font-black tracking-tight uppercase leading-none">{t('settings')}</h1>
+        <p className="text-on-surface-variant font-bold text-xs uppercase tracking-widest opacity-40 mt-6 max-w-md">{t('settings_desc')}</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Preferences Section */}
-        <section className="lg:col-span-8 space-y-8">
-          <motion.div 
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 text-left">
+        {/* Main Content */}
+        <div className="lg:col-span-8 space-y-10 text-left">
+          {/* Preferences Card */}
+          <motion.section 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-container border border-outline-variant/30 rounded-[3rem] p-8 md:p-12 shadow-sm"
+            className="bg-surface-container border border-outline-variant/30 rounded-[3.5rem] p-8 md:p-14 shadow-sm text-left"
           >
-            <div className="flex items-center gap-4 mb-10">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                <Sliders className="w-6 h-6" />
+            <div className="flex items-center gap-6 mb-12 text-left">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                <Sliders className="w-8 h-8" />
               </div>
-              <div>
+              <div className="text-left">
                 <h3 className="text-2xl text-on-surface font-heading font-black uppercase tracking-tight">{t('appearance')}</h3>
-                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60">{t('ui_personalization')}</p>
+                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-40">{t('ui_personalization')}</p>
               </div>
             </div>
             
-            <div className="space-y-6">
-              {/* Dark Mode Toggle */}
-              <div className="flex items-center justify-between pb-6 border-b border-outline-variant/30">
-                <div>
-                  <p className="text-sm font-bold text-on-surface">{t('dark_mode')}</p>
-                  <p className="text-xs text-on-surface-variant">{t('dark_mode_desc')}</p>
+            <div className="space-y-10 text-left">
+              {/* Dark Mode */}
+              <div className="flex items-center justify-between p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 text-left">
+                <div className="flex items-center gap-5 text-left">
+                  <div className={`p-4 rounded-2xl ${theme === 'dark' ? 'bg-primary/20 text-primary' : 'bg-on-surface/5 text-on-surface-variant'}`}>
+                    {theme === 'dark' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-black text-on-surface uppercase tracking-wider">{t('dark_mode')}</p>
+                    <p className="text-[10px] text-on-surface-variant font-bold opacity-50 uppercase tracking-widest mt-1">{t('dark_mode_desc')}</p>
+                  </div>
                 </div>
                 <button 
                   onClick={toggleTheme}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-outline-variant/30'}`}
+                  className={`relative w-14 h-8 rounded-full transition-all duration-500 p-1 flex items-center ${theme === 'dark' ? 'bg-primary shadow-lg shadow-primary/20' : 'bg-outline-variant/30'}`}
                 >
-                  <div className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform ${theme === 'dark' ? 'translate-x-5' : ''}`} />
+                  <motion.div 
+                    layout
+                    className={`h-6 w-6 rounded-full bg-white shadow-md ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`} 
+                  />
                 </button>
               </div>
 
-              {/* Language Selection */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-outline-variant/30 gap-4">
-                <div>
-                  <p className="text-sm font-bold text-on-surface">{t('language_label')}</p>
-                  <p className="text-xs text-on-surface-variant">{t('language_desc')}</p>
+              {/* Language */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 gap-6 text-left">
+                <div className="flex items-center gap-5 text-left">
+                  <div className="p-4 rounded-2xl bg-on-surface/5 text-on-surface-variant">
+                    <Languages className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-black text-on-surface uppercase tracking-wider">{t('language_label')}</p>
+                    <p className="text-[10px] text-on-surface-variant font-bold opacity-50 uppercase tracking-widest mt-1">{t('language_desc')}</p>
+                  </div>
                 </div>
-                <select 
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as any)}
-                  className="px-4 py-2 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm focus:border-primary focus:ring-primary w-full sm:w-48 outline-none transition-all"
-                >
-                  <option value="en">English (US)</option>
-                  <option value="th">ไทย</option>
-                </select>
+                <div className="relative group min-w-[160px]">
+                  <select 
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as any)}
+                    className="appearance-none w-full px-6 py-4 rounded-2xl border border-outline-variant bg-surface text-on-surface text-xs font-black uppercase tracking-widest focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm pr-12"
+                  >
+                    <option value="en">English (US)</option>
+                    <option value="th">ไทย (TH)</option>
+                  </select>
+                  <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-outline rotate-90" />
+                </div>
               </div>
 
-              {/* Toggles Group */}
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-on-surface">{t('push_notifications')}</p>
-                    <p className="text-xs text-on-surface-variant">{t('push_notif_desc')}</p>
+              {/* Notifications */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                  <div className="p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 flex items-center justify-between group h-full">
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-surface flex items-center justify-center border border-outline/20">
+                           <Bell className={`w-5 h-5 ${pushNotif ? 'text-primary' : 'text-on-surface-variant opacity-40'}`} />
+                        </div>
+                        <span className="text-[10px] font-black text-on-surface uppercase tracking-widest">{t('push')}</span>
+                     </div>
+                     <button onClick={() => setPushNotif(!pushNotif)} className={`w-10 h-6 rounded-full relative transition-colors ${pushNotif ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${pushNotif ? 'translate-x-4' : ''}`} />
+                     </button>
                   </div>
-                  <button 
-                    onClick={() => setPushNotif(!pushNotif)}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${pushNotif ? 'bg-primary' : 'bg-outline-variant/30'}`}
-                  >
-                    <div className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform ${pushNotif ? 'translate-x-5' : ''}`} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-on-surface">{t('email_notif')}</p>
-                    <p className="text-xs text-on-surface-variant">{t('email_notif_desc')}</p>
+                  <div className="p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 flex items-center justify-between group h-full">
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-surface flex items-center justify-center border border-outline/20">
+                           <Info className={`w-5 h-5 ${emailNotif ? 'text-primary' : 'text-on-surface-variant opacity-40'}`} />
+                        </div>
+                        <span className="text-[10px] font-black text-on-surface uppercase tracking-widest">{t('email')}</span>
+                     </div>
+                     <button onClick={() => setEmailNotif(!emailNotif)} className={`w-10 h-6 rounded-full relative transition-colors ${emailNotif ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${emailNotif ? 'translate-x-4' : ''}`} />
+                     </button>
                   </div>
-                  <button 
-                    onClick={() => setEmailNotif(!emailNotif)}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${emailNotif ? 'bg-primary' : 'bg-outline-variant/30'}`}
-                  >
-                    <div className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform ${emailNotif ? 'translate-x-5' : ''}`} />
-                  </button>
-                </div>
               </div>
             </div>
-          </motion.div>
+          </motion.section>
 
-          {/* Security Card */}
-          <motion.div 
+          {/* Security Section */}
+          <motion.section 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-surface-container border border-outline-variant/30 rounded-[3rem] p-8 md:p-12 shadow-sm"
+            className="bg-surface-container border border-outline-variant/30 rounded-[3.5rem] p-8 md:p-14 shadow-sm text-left"
           >
-            <div className="flex items-center gap-4 mb-10">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                <Shield className="w-6 h-6" />
+            <div className="flex items-center gap-6 mb-12 text-left">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                <Lock className="w-8 h-8" />
               </div>
-              <div>
+              <div className="text-left">
                 <h3 className="text-2xl text-on-surface font-heading font-black uppercase tracking-tight">{t('security')}</h3>
-                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60">{t('protection_access')}</p>
+                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-40">{t('protection_access')}</p>
               </div>
             </div>
             
-            {isGoogleUser ? (
-              <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-4">
-                <Info className="text-blue-500 w-6 h-6 shrink-0" />
-                <p className="text-sm text-on-surface-variant leading-relaxed">
-                  {t('google_user_pwd_msg')}
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handlePasswordUpdate} className="space-y-6">
-                {pwdError && (
-                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm font-medium">
-                    {pwdError}
+            <div className="space-y-10 text-left">
+               {/* 2FA Card (Pre-UI) */}
+               <div className="p-8 bg-emerald-500/[0.03] border border-emerald-500/20 rounded-[3rem] relative overflow-hidden group text-left">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10 text-left">
+                     <div className="flex items-center gap-6 text-left">
+                        <div className="p-5 rounded-2xl bg-emerald-500/10 text-emerald-500 shrink-0">
+                           <Smartphone className="w-8 h-8" />
+                        </div>
+                        <div className="text-left">
+                           <div className="flex items-center gap-3 mb-1">
+                              <h4 className="text-lg font-black text-on-surface font-heading uppercase tracking-tight">{t('two_factor_auth')}</h4>
+                              <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black rounded uppercase tracking-widest shadow-sm shadow-emerald-500/40">Recommended</span>
+                           </div>
+                           <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60 leading-relaxed max-w-sm">{t('two_factor_desc') || "Add an extra layer of security to your account by requiring a verification code."}</p>
+                        </div>
+                     </div>
+                     <button 
+                       onClick={() => setShow2FAModal(true)}
+                       className="px-8 py-4 bg-primary text-on-primary rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+                     >
+                       {t('setup_2fa') || "Setup Now"}
+                     </button>
                   </div>
-                )}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('current_password')}</label>
-                  <input 
-                    name="current_password"
-                    className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                    placeholder="••••••••" 
-                    type="password" 
-                    required 
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('new_password')}</label>
-                    <input 
-                      name="new_password"
-                      className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder={t('new_password')} 
-                      type="password" 
-                      required 
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block ml-1">{t('confirm_new_password')}</label>
-                    <input 
-                      name="confirm_new_password"
-                      className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                      placeholder={t('confirm_new_password')} 
-                      type="password" 
-                      required 
-                    />
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <button 
-                    className="bg-primary hover:bg-primary-container text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-70 flex items-center gap-2 uppercase tracking-wider" 
-                    type="submit"
-                    disabled={isUpdatingPassword}
-                  >
-                    {isUpdatingPassword && (
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                        <Sliders className="w-4 h-4" />
-                      </motion.div>
+               </div>
+
+               {isGoogleUser ? (
+                 <div className="p-8 bg-on-surface/[0.03] border border-outline-variant/20 rounded-[2.5rem] flex items-start gap-6 text-left">
+                    <div className="p-3 bg-primary/10 rounded-xl text-primary shrink-0">
+                      <Globe className="w-6 h-6" />
+                    </div>
+                    <p className="text-xs font-bold text-on-surface-variant leading-relaxed opacity-60">
+                      {t('google_user_pwd_msg')}
+                    </p>
+                 </div>
+               ) : (
+                 <form onSubmit={handlePasswordUpdate} className="space-y-8 text-left">
+                    {pwdError && (
+                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest text-center">
+                        {pwdError}
+                      </div>
                     )}
-                    {isUpdatingPassword ? t('processing') : t('update_password')}
-                  </button>
-                </div>
-              </form>
-            )}
-          </motion.div>
-        </section>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                       <div className="space-y-3">
+                         <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block ml-2 opacity-60">{t('new_password')}</label>
+                         <input 
+                           name="new_password"
+                           className="w-full h-16 px-6 rounded-2xl border border-outline-variant bg-surface text-sm font-bold text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                           placeholder="••••••••" 
+                           type="password" 
+                           required 
+                         />
+                       </div>
+                       <div className="space-y-3 text-left">
+                         <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block ml-2 opacity-60">{t('confirm_new_password')}</label>
+                         <input 
+                           name="confirm_new_password"
+                           className="w-full h-16 px-6 rounded-2xl border border-outline-variant bg-surface text-sm font-bold text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                           placeholder="••••••••" 
+                           type="password" 
+                           required 
+                         />
+                       </div>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                      <button 
+                        className="px-10 py-5 bg-on-surface text-surface rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-on-surface/20 active:scale-95 transition-all disabled:opacity-70 flex items-center gap-3" 
+                        type="submit"
+                        disabled={isUpdatingPassword}
+                      >
+                        {isUpdatingPassword ? (
+                          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                            <Shield className="w-5 h-5" />
+                          </motion.div>
+                        ) : <Shield className="w-5 h-5" />}
+                        {isUpdatingPassword ? t('processing') : t('update_password')}
+                      </button>
+                    </div>
+                 </form>
+               )}
+            </div>
+          </motion.section>
+        </div>
 
         {/* Danger Zone Aside */}
-        <section className="lg:col-span-4">
+        <aside className="lg:col-span-4 space-y-10 text-left">
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 sticky top-24"
+            className="bg-rose-500/5 border border-rose-500/20 rounded-[3rem] p-10 sticky top-24 space-y-10 text-left"
           >
-            <h3 className="text-xl text-red-600 dark:text-red-400 mb-4 flex items-center gap-3 font-heading">
-              <AlertTriangle className="w-6 h-6" />
-              {t('danger_zone')}
-            </h3>
-            <p className="text-sm text-on-surface-variant mb-8 leading-relaxed">
-              {t('delete_account_desc')}
-            </p>
-            <button 
-              onClick={() => setShowDeleteModal(true)}
-              className="w-full py-3 px-6 border-2 border-red-600 dark:border-red-400 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-600 hover:text-white dark:hover:bg-red-400 dark:hover:text-black transition-all active:scale-95 outline-none focus:ring-2 focus:ring-red-500 uppercase tracking-widest text-xs"
-            >
-              {t('delete_account')}
-            </button>
+            <div className="flex items-center gap-4 text-rose-500 text-left">
+               <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6" />
+               </div>
+               <h3 className="text-xl font-heading font-black uppercase tracking-tight leading-none">{t('danger_zone')}</h3>
+            </div>
+            
+            <div>
+               <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-4 opacity-70 text-left">{t('warning') || "CAUTION"}</p>
+               <p className="text-xs text-on-surface-variant font-bold leading-relaxed opacity-60 mb-8 text-left">
+                 {t('delete_account_desc')}
+               </p>
+               <button 
+                 onClick={() => setShowDeleteModal(true)}
+                 className="w-full py-5 px-6 border-2 border-rose-500 text-rose-500 font-black rounded-2xl hover:bg-rose-500 hover:text-white transition-all active:scale-95 outline-none focus:ring-4 focus:ring-rose-500/20 uppercase tracking-[0.2em] text-[10px]"
+               >
+                 {t('delete_account')}
+               </button>
+            </div>
 
             {/* Account Meta Stats */}
-            <div className="mt-12 pt-8 border-t border-outline-variant/10 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-on-surface/5 flex items-center justify-center shadow-sm">
-                  <Info className="text-on-surface-variant w-5 h-5" />
+            <div className="pt-10 border-t border-outline-variant/10 space-y-6 text-left">
+              <div className="flex items-center gap-5 text-left">
+                <div className="w-12 h-12 rounded-2xl bg-on-surface/[0.05] flex items-center justify-center">
+                  <CreditCard className="text-on-surface-variant w-5 h-5" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('member_tier')}</p>
-                  <p className="text-sm font-bold text-on-surface">{t((currentMember?.role || 'Standard').toLowerCase()) || currentMember?.role || t('standard_tier')}</p>
+                <div className="text-left">
+                  <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40">{t('member_tier')}</p>
+                  <p className="text-sm font-black text-on-surface uppercase tracking-tight">{t((currentMember?.role || 'Standard').toLowerCase()) || currentMember?.role || t('standard_tier')}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-on-surface/5 flex items-center justify-center shadow-sm">
+              <div className="flex items-center gap-5 text-left">
+                <div className="w-12 h-12 rounded-2xl bg-on-surface/[0.05] flex items-center justify-center">
                   <Calendar className="text-on-surface-variant w-5 h-5" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('member_since')}</p>
-                  <p className="text-sm font-bold text-on-surface">{t('member_since_date')}</p>
+                <div className="text-left">
+                  <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40">{t('member_since')}</p>
+                  <p className="text-sm font-black text-on-surface uppercase tracking-tight">{currentMember?.joinDate || t('member_since_date')}</p>
                 </div>
               </div>
             </div>
           </motion.div>
-        </section>
+        </aside>
       </div>
 
       {/* Delete Confirmation Modal Overlay */}
@@ -305,32 +350,64 @@ export default function Settings() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-surface-container border border-outline-variant/30 rounded-[2rem] max-w-md w-full shadow-2xl p-8 z-10"
+              className="relative bg-surface-container border border-outline-variant/30 rounded-[3rem] max-w-sm w-full shadow-2xl p-10 z-10 text-center"
             >
-              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                <AlertTriangle className="text-red-500 w-8 h-8" />
+              <div className="w-20 h-20 rounded-[2rem] bg-rose-500/10 flex items-center justify-center mb-8 mx-auto shadow-inner">
+                <AlertTriangle className="text-rose-500 w-10 h-10" />
               </div>
-              <h2 className="text-2xl text-on-surface mb-4 font_heading">{t('are_you_sure')}</h2>
-              <p className="text-on-surface-variant mb-8 leading-relaxed">
+              <h2 className="text-2xl text-on-surface mb-4 font_heading font-black uppercase tracking-tight leading-none">{t('are_you_sure')}</h2>
+              <p className="text-xs text-on-surface-variant font-bold leading-relaxed opacity-60 mb-10 pb-4 border-b border-outline/10 uppercase tracking-widest">
                 {t('delete_confirm_desc')}
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 py-3 rounded-xl font-bold bg-on-surface/5 text-on-surface hover:bg-on-surface/10 transition-colors active:scale-95"
-                >
-                  {t('cancel')}
-                </button>
-                <button 
+              <div className="flex flex-col gap-4">
+                 <button 
                   onClick={handleDeleteAccount}
-                  className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 active:scale-95"
+                  className="w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-rose-500 text-white hover:bg-rose-600 transition-all shadow-2xl shadow-rose-500/40 active:scale-95"
                 >
                   {t('yes_delete')}
+                </button>
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-on-surface/5 text-on-surface hover:bg-on-surface/10 transition-all"
+                >
+                  {t('cancel')}
                 </button>
               </div>
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* 2FA Setup Modal Placeholder */}
+      <AnimatePresence>
+         {show2FAModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShow2FAModal(false)} className="absolute inset-0 bg-on-surface/60 backdrop-blur-md" />
+               <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-surface-container border border-outline/30 rounded-[3.5rem] max-w-md w-full shadow-2xl p-10 z-10 text-center">
+                  <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center mb-10 mx-auto shadow-inner">
+                     <Shield className="text-emerald-500 w-12 h-12" />
+                  </div>
+                  <h2 className="text-3xl font-black font-heading uppercase tracking-tight text-on-surface mb-4">Enhance Security</h2>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-relaxed max-w-xs mx-auto mb-10">
+                     We are preparing a secure Two-Factor Authentication (2FA) experience using biometric and authenticator apps. Stay tuned!
+                  </p>
+                  <div className="space-y-4">
+                     <div className="p-6 bg-on-surface/5 rounded-3xl border border-outline/10 text-left flex items-center gap-5 group">
+                        <div className="p-3 bg-surface rounded-xl text-primary border border-outline/20">
+                           <Key className="w-5 h-5" />
+                        </div>
+                        <div>
+                           <p className="text-[10px] font-black text-on-surface uppercase tracking-widest">Hardware Keys</p>
+                           <p className="text-[9px] text-on-surface-variant font-bold uppercase opacity-40">Coming Soon</p>
+                        </div>
+                     </div>
+                     <button onClick={() => setShow2FAModal(false)} className="w-full py-5 bg-on-surface text-surface rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-on-surface/20 active:scale-95 transition-all">
+                        {t('confirm')}
+                     </button>
+                  </div>
+               </motion.div>
+            </div>
+         )}
       </AnimatePresence>
     </div>
   );

@@ -1,13 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { Users, TrendingUp, UserPlus, CreditCard, BadgeCheck, FileEdit, ArrowRight, MessageSquarePlus, FileSpreadsheet, ChevronRight, CheckCircle2, Star, Wallet, Plus } from 'lucide-react';
+import { 
+  Users, TrendingUp, UserPlus, CreditCard, BadgeCheck, FileEdit, 
+  ArrowRight, MessageSquarePlus, FileSpreadsheet, ChevronRight, 
+  CheckCircle2, Star, Wallet, Plus, Zap, UserCircle, QrCode, 
+  Search, Filter, Inbox
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { Link } from 'react-router-dom';
 import { TIER_COLORS, TIER_BENEFITS, ALL_ROLES } from '../constants';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid 
+} from 'recharts';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export default function Dashboard() {
-  const { t, members, user, isAdmin, currentMember, exportMembers, purchaseItem, activities: realActivities } = useApp();
+  const { t, members, user, isAdmin, currentMember, activities: realActivities, loading } = useApp();
   
   const totalMembersCount = members.length;
   const onlineMembersCount = members.filter(m => m.status === 'Active').length;
@@ -36,13 +45,24 @@ export default function Dashboard() {
     return distribution.slice(0, 6);
   }, [members]);
 
+  // Simulated Spending data for Chart
+  const spendingData = [
+    { day: 'Mon', amount: 1200 },
+    { day: 'Tue', amount: 3400 },
+    { day: 'Wed', amount: 2100 },
+    { day: 'Thu', amount: 4800 },
+    { day: 'Fri', amount: 3200 },
+    { day: 'Sat', amount: 5600 },
+    { day: 'Sun', amount: 4200 },
+  ];
+
   const currentTierBenefits = useMemo(() => {
     const role = currentMember?.role || 'Standard';
     return TIER_BENEFITS[role] || TIER_BENEFITS['Standard'];
   }, [currentMember]);
 
   const dashboardActivities = useMemo(() => {
-    return realActivities.slice(0, 3).map(act => {
+    return realActivities.slice(0, 5).map(act => {
       let icon = FileEdit;
       let iconBg = 'bg-primary/10';
       let iconColor = 'text-primary';
@@ -83,6 +103,24 @@ export default function Dashboard() {
   const nextTier = nextTiers.find(t => t.min > currentTotalTopUp);
   const progress = nextTier ? Math.min((currentTotalTopUp / nextTier.min) * 100, 100) : 100;
 
+  if (loading) {
+    return (
+      <div className="space-y-12 pb-16">
+        <Skeleton variant="rounded" className="h-64 sm:h-96 w-full rounded-[4rem]" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 sm:gap-8">
+           <Skeleton variant="rounded" className="h-48 rounded-[3rem]" />
+           <Skeleton variant="rounded" className="h-48 rounded-[3rem]" />
+           <Skeleton variant="rounded" className="h-48 rounded-[3rem]" />
+           <Skeleton variant="rounded" className="h-48 rounded-[3rem]" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <Skeleton variant="rounded" className="lg:col-span-2 h-[500px] rounded-[3rem]" />
+          <Skeleton variant="rounded" className="h-[500px] rounded-[3rem]" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-12 pb-16">
       {/* Personal Tier Hero (Visible to Everyone) */}
@@ -96,7 +134,8 @@ export default function Dashboard() {
             <h1 className="text-3xl sm:text-5xl md:text-7xl text-on-surface font-heading font-extrabold tracking-tight mb-5 sm:mb-6 leading-[1.1] break-words">
               {t('welcome')}, <span className="text-primary bg-clip-text decoration-primary/30 underline underline-offset-4 sm:underline-offset-8 break-keep">{displayName}</span>
             </h1>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
+            
+            <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
               {isAdmin && (
                 <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-rose-500/10 rounded-full border border-rose-500/20 backdrop-blur-sm">
                   <BadgeCheck className="w-4 h-4 text-rose-500" />
@@ -107,6 +146,26 @@ export default function Dashboard() {
                 <BadgeCheck className="w-4 h-4 text-primary" />
                 <span className="text-[10px] font-black text-primary uppercase tracking-widest">{t('tier_account').replace('{tier}', t((currentMember?.role || 'Standard').toLowerCase()) || (currentMember?.role || 'Standard'))}</span>
               </div>
+            </div>
+
+            {/* Quick Actions Component */}
+            <div className="grid grid-cols-3 gap-4 max-w-sm">
+               {[
+                 { icon: Wallet, label: t('top_up_short'), path: '/shop', color: 'bg-emerald-500/10 text-emerald-500' },
+                 { icon: QrCode, label: t('check_in'), path: '/activities', color: 'bg-blue-500/10 text-blue-500' },
+                 { icon: UserCircle, label: t('edit_profile_short'), path: '/profile', color: 'bg-amber-500/10 text-amber-500' },
+               ].map((action, i) => (
+                 <Link 
+                   key={i} 
+                   to={action.path}
+                   className="flex flex-col items-center gap-3 p-4 rounded-3xl bg-surface/40 backdrop-blur-md border border-outline/30 hover:bg-surface/60 transition-all hover:-translate-y-1 group"
+                 >
+                    <div className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                       <action.icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-on-surface opacity-60">{action.label}</span>
+                 </Link>
+               ))}
             </div>
           </motion.div>
 
@@ -160,6 +219,40 @@ export default function Dashboard() {
                 </p>
               </div>
             )}
+
+            {/* Profile Completeness Insight */}
+            <Link to="/profile" className="space-y-4 pt-4 border-t border-outline-variant/30 hover:bg-on-surface/[0.02] -mx-2 px-2 rounded-2xl transition-colors block">
+              <div className="flex justify-between items-end">
+                <div className="flex items-center gap-2">
+                  <UserCircle className="w-3.5 h-3.5 text-orange-500" />
+                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest leading-none">{t('profile_completion')}</p>
+                </div>
+                <p className="text-xs font-black text-orange-500 font-mono leading-none">
+                  {(() => {
+                    let score = 0;
+                    if (user?.displayName) score += 25;
+                    if (currentMember?.phone) score += 25;
+                    if (currentMember?.address) score += 25;
+                    if (user?.photoURL) score += 25;
+                    return score;
+                  })()}%
+                </p>
+              </div>
+              <div className="h-2 bg-on-surface/5 rounded-full overflow-hidden p-[1px] border border-outline-variant/30">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(() => {
+                    let score = 0;
+                    if (user?.displayName) score += 25;
+                    if (currentMember?.phone) score += 25;
+                    if (currentMember?.address) score += 25;
+                    if (user?.photoURL) score += 25;
+                    return score;
+                  })()}%` }}
+                  className="h-full bg-orange-500 rounded-full"
+                />
+              </div>
+            </Link>
             
             <div className="mt-2 pt-4 border-t border-outline-variant/30">
               <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 mb-3">{t('tier_privileges')}</p>
@@ -175,7 +268,121 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Admin Specific Content */}
+      {/* Analytics and Data Visualization Section */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* Spending Chart Section */}
+        <div className="lg:col-span-2 bg-surface-container border border-outline rounded-[3rem] p-10 flex flex-col gap-8 overflow-hidden">
+           <div className="flex items-center justify-between">
+              <div className="text-left">
+                <h3 className="text-xl text-on-surface font-heading font-black uppercase tracking-tight">{t('spending_analysis')}</h3>
+                <p className="text-xs text-on-surface-variant opacity-50 font-bold uppercase tracking-widest mt-1">{t('weekly_throughput')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                 <div className="px-4 py-2 bg-on-surface/5 rounded-xl border border-outline/30 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Revenue</span>
+                 </div>
+              </div>
+           </div>
+
+           <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={spendingData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#888888" strokeOpacity={0.1} />
+                  <XAxis 
+                    dataKey="day" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 900, fill: '#888888' }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 900, fill: '#888888' }} 
+                  />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '24px', border: '1px solid rgba(128,128,128, 0.2)', backgroundColor: 'rgba(255,255,255, 0.9)', backdropFilter: 'blur(10px)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="amount" 
+                    stroke="#3b82f6" 
+                    strokeWidth={4} 
+                    fillOpacity={1} 
+                    fill="url(#colorAmount)" 
+                    animationDuration={2000}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+           </div>
+        </div>
+
+        {/* Tier Distribution Section */}
+        <div className="bg-surface-container p-10 rounded-[3rem] border border-outline shadow-sm flex flex-col min-h-[460px]">
+          <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em] mb-6 text-left">{t('member_tier_distribution')}</h3>
+          
+          <div className="flex-1 flex flex-col">
+            <div className="h-[240px] w-full relative mb-6">
+              <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                <PieChart>
+                  <Pie
+                    data={tierStats}
+                    innerRadius={60}
+                    outerRadius={85}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                    animationDuration={1500}
+                    animationBegin={300}
+                  >
+                    {tierStats.map((entry, index) => {
+                      const colorMap: Record<string, string> = {
+                        'bg-slate-500': '#64748b',
+                        'bg-zinc-400': '#a1a1aa',
+                        'bg-amber-500': '#f59e0b',
+                        'bg-cyan-500': '#06b6d4',
+                        'bg-blue-600': '#2563eb',
+                        'bg-rose-500': '#f43f5e',
+                        'bg-red-600': '#dc2626'
+                      };
+                      return <Cell key={`cell-${index}`} fill={colorMap[entry.color] || '#3b82f6'} />;
+                    })}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40">Tiers</p>
+                <p className="text-2xl font-black text-on-surface font-mono tracking-tighter tabular-nums">{totalMembersCount}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {tierStats.map((tier) => (
+                <div key={tier.name} className="flex flex-col gap-2 p-3 rounded-2xl bg-on-surface/[0.03] border border-outline/10">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${tier.color}`} />
+                    <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest truncate">{tier.name}</span>
+                  </div>
+                  <p className="text-lg font-black text-on-surface font-mono tracking-tighter">{tier.value}%</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Admin Specific Indicators */}
       {isAdmin && (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <div className="flex items-center gap-6">
@@ -209,7 +416,7 @@ export default function Dashboard() {
                       </div>
                       <span className="text-emerald-500 text-[9px] sm:text-[10px] font-black flex items-center bg-emerald-500/10 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-emerald-500/10 uppercase tracking-widest leading-none">{stat.change}</span>
                     </div>
-                    <div className="relative z-10">
+                    <div className="relative z-10 text-left">
                       <p className="text-on-surface-variant text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] mb-1 sm:mb-2 opacity-50">{stat.label}</p>
                       <h3 className="text-3xl sm:text-5xl text-on-surface font-heading font-black tabular-nums tracking-tighter">{stat.value}</h3>
                     </div>
@@ -235,7 +442,7 @@ export default function Dashboard() {
                   </div>
                   <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-primary text-white text-[9px] sm:text-[10px] font-black rounded-full uppercase tracking-[0.15em] shadow-lg shadow-primary/20 leading-none">{t('action_required')}</span>
                 </div>
-                <div className="relative z-10">
+                <div className="relative z-10 text-left">
                   <p className="text-surface/50 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] mb-1 sm:mb-2">{t('pending_approval')}</p>
                   <div className="flex items-baseline gap-2 sm:gap-3">
                     <h3 className="text-3xl sm:text-4xl lg:text-5xl font-black font-heading tabular-nums tracking-tighter">{pendingMembersCount}</h3>
@@ -245,138 +452,76 @@ export default function Dashboard() {
               </Link>
             </motion.div>
           </section>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            <div className="lg:col-span-2 bg-surface-container border border-outline rounded-[3rem] shadow-sm overflow-hidden flex flex-col">
-              <div className="px-10 py-8 border-b border-outline flex items-center justify-between bg-on-surface/[0.01]">
-                <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em]">{t('recent_activity')}</h3>
-                <Link to="/activities" className="text-primary text-[11px] font-black uppercase tracking-[0.2em] hover:underline underline-offset-4">{t('view_all')}</Link>
-              </div>
-              <div className="divide-y divide-outline/60">
-                {dashboardActivities.length > 0 ? (
-                  dashboardActivities.map((act, idx) => {
-                    const Icon = act.icon;
-                    return (
-                      <div key={idx} className="px-10 py-7 flex items-center gap-6 transition-colors hover:bg-on-surface/[0.02]">
-                        <div className={`h-14 w-14 rounded-2xl ${act.iconBg} flex items-center justify-center shadow-sm`}>
-                          <Icon className={`${act.iconColor} w-7 h-7`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-base font-bold text-on-surface truncate tracking-tight">{act.title}</p>
-                            {act.userName && isAdmin && (
-                              <span className="px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded uppercase tracking-widest border border-primary/20 leading-none h-fit">
-                                {act.userName}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-[0.15em] opacity-50 mt-0.5">{act.sub}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {act.amount ? (
-                            <span className="text-lg font-black text-on-surface font-mono tracking-tighter leading-none">{act.amount}</span>
-                          ) : (
-                            <span className="text-[10px] font-black uppercase tracking-widest bg-on-surface/5 px-3 py-1.5 rounded-lg opacity-60 leading-none">{act.status}</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="px-8 py-20 text-center">
-                    <div className="w-16 h-16 bg-on-surface/5 rounded-full flex items-center justify-center mx-auto mb-6 opacity-30">
-                       <CreditCard className="w-8 h-8" />
-                    </div>
-                    <p className="text-on-surface-variant font-bold italic opacity-40">{t('no_telemetry')}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="bg-surface-container p-10 rounded-[3rem] border border-outline shadow-sm flex flex-col min-h-[500px]">
-              <h3 className="text-lg text-on-surface font-heading font-black uppercase tracking-[0.1em] mb-6">{t('member_tier_distribution')}</h3>
-              
-              <div className="flex-1 flex flex-col">
-                <div className="h-[240px] w-full relative mb-6">
-                  <ResponsiveContainer width="99%" height="100%" minWidth={0}>
-                    <PieChart>
-                      <Pie
-                        data={tierStats}
-                        innerRadius={60}
-                        outerRadius={85}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                        animationDuration={1500}
-                        animationBegin={300}
-                      >
-                        {tierStats.map((entry, index) => {
-                          const colorClass = entry.color; // e.g. "bg-amber-500"
-                          // We need to extract the hex or just use current theme colors if possible
-                          // but recharts needs hex/literal colors for Cell fill.
-                          // I'll map the standard tailwind classes to hex for the chart.
-                          const colorMap: Record<string, string> = {
-                            'bg-slate-500': '#64748b',
-                            'bg-zinc-400': '#a1a1aa',
-                            'bg-amber-500': '#f59e0b',
-                            'bg-cyan-500': '#06b6d4',
-                            'bg-blue-600': '#2563eb',
-                            'bg-rose-500': '#f43f5e',
-                            'bg-red-600': '#dc2626'
-                          };
-                          return <Cell key={`cell-${index}`} fill={colorMap[colorClass] || '#3b82f6'} />;
-                        })}
-                      </Pie>
-                      <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-surface rounded-xl p-3 shadow-2xl border border-outline/50 backdrop-blur-md">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">{payload[0].name}</p>
-                                <p className="text-lg font-black font-mono text-on-surface">{payload[0].value}%</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40">Tiers</p>
-                    <p className="text-2xl font-black text-on-surface font-mono tracking-tighter tabular-nums">{totalMembersCount}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {tierStats.map((tier) => (
-                    <div key={tier.name} className="flex flex-col gap-2 p-3 rounded-2xl bg-on-surface/[0.03] border border-outline/10">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${tier.color}`} />
-                        <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest truncate">{tier.name}</span>
-                      </div>
-                      <p className="text-lg font-black text-on-surface font-mono tracking-tighter">{tier.value}%</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-8 pt-8 border-t border-outline/50">
-                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-[0.2em] leading-relaxed opacity-40">
-                  {t('data_updated_realtime')}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-        <Link to="/shop" className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8">
+      {/* Activities Section */}
+      <section className="bg-surface-container border border-outline rounded-[2rem] sm:rounded-[4rem] overflow-hidden shadow-sm">
+        <div className="px-8 py-6 sm:px-12 sm:py-10 border-b border-outline flex items-center justify-between bg-on-surface/[0.01]">
+           <div className="flex items-center gap-4">
+              <h3 className="text-xl sm:text-2xl font-black font-heading uppercase tracking-tight text-on-surface leading-none md:flex md:items-center md:gap-4">
+                {t('recent_activity')}
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                    <Zap className="w-3 h-3 text-primary" />
+                    <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em]">{t('realtime_feed')}</span>
+                </div>
+              </h3>
+           </div>
+           <Link to="/activities" className="text-primary text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] hover:underline underline-offset-4 flex items-center gap-2 group">
+              {t('view_all')}
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+           </Link>
+        </div>
+        <div className="divide-y divide-outline/60">
+           {dashboardActivities.length > 0 ? (
+             dashboardActivities.map((act, idx) => {
+               const Icon = act.icon;
+               return (
+                 <div key={idx} className="px-8 py-6 sm:px-12 sm:py-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 transition-colors hover:bg-on-surface/[0.01] group">
+                   <div className="flex items-center gap-4 sm:gap-8 flex-1 min-w-0">
+                     <div className={`h-12 w-12 sm:h-16 sm:w-16 rounded-[1rem] sm:rounded-[1.25rem] ${act.iconBg} flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform shrink-0`}>
+                       <Icon className={`${act.iconColor} w-6 h-6 sm:w-8 sm:h-8`} />
+                     </div>
+                     <div className="flex-1 min-w-0 text-left">
+                       <div className="flex items-center gap-2">
+                         <p className="text-lg sm:text-xl font-bold text-on-surface truncate tracking-tight">{act.title}</p>
+                         {act.userName && isAdmin && (
+                           <span className="px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded uppercase tracking-widest border border-primary/20 leading-none h-fit">
+                             {act.userName}
+                           </span>
+                         )}
+                       </div>
+                       <p className="text-[10px] sm:text-xs text-on-surface-variant font-bold uppercase tracking-[0.15em] opacity-40 mt-0.5 sm:mt-1">{act.sub}</p>
+                     </div>
+                   </div>
+                   <div className="text-left sm:text-right shrink-0 pl-16 sm:pl-0">
+                     <p className="text-lg sm:text-xl font-black text-on-surface truncate font-mono tracking-tighter tabular-nums leading-none">
+                       {act.amount || act.status || act.name || act.time}
+                     </p>
+                   </div>
+                 </div>
+               );
+             })
+           ) : (
+             <div className="p-16 sm:p-32 text-center flex flex-col items-center">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 bg-on-surface/5 rounded-[2rem] flex items-center justify-center mb-8 relative">
+                   <div className="absolute inset-0 bg-primary/5 rounded-full blur-2xl animate-pulse" />
+                   <Inbox className="w-10 h-10 sm:w-12 sm:h-12 text-on-surface-variant opacity-20 relative z-10" />
+                </div>
+                <h4 className="text-xl font-black font-heading uppercase tracking-tight text-on-surface mb-2">{t('no_activities_yet')}</h4>
+                <p className="text-sm text-on-surface-variant font-bold italic opacity-40 max-w-xs mx-auto leading-relaxed">{t('start_activity_msg')}</p>
+             </div>
+           )}
+        </div>
+      </section>
+
+      {/* Bottom Shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        <Link to="/shop" className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8 min-h-[300px]">
           <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-[1rem] sm:rounded-[1.25rem] bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-primary/5">
             <CreditCard className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <div>
+          <div className="text-left">
             <h4 className="text-xl sm:text-2xl font-black font-heading tracking-tight text-on-surface uppercase">{t('curated_shop')}</h4>
             <p className="text-sm text-on-surface-variant mt-1 sm:mt-2 leading-relaxed opacity-70 font-medium">{t('shop_desc')}</p>
           </div>
@@ -386,11 +531,11 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        <Link to="/profile" className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8 transition-all">
+        <Link to="/profile" className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8 transition-all min-h-[300px]">
           <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-[1rem] sm:rounded-[1.25rem] bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/5">
             <FileEdit className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <div>
+          <div className="text-left">
             <h4 className="text-xl sm:text-2xl font-black font-heading tracking-tight text-on-surface uppercase">{t('profile')}</h4>
             <p className="text-sm text-on-surface-variant mt-1 sm:mt-2 leading-relaxed opacity-70 font-medium">{t('profile_desc')}</p>
           </div>
@@ -402,12 +547,12 @@ export default function Dashboard() {
 
         <button 
           onClick={() => setShowAllTiers(true)}
-          className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8 text-left"
+          className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8 text-left min-h-[300px]"
         >
           <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-[1rem] sm:rounded-[1.25rem] bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-amber-500/5">
             <Star className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <div>
+          <div className="text-left">
             <h4 className="text-xl sm:text-2xl font-black font-heading tracking-tight text-on-surface uppercase">{t('tier_benefits')}</h4>
             <p className="text-sm text-on-surface-variant mt-1 sm:mt-2 leading-relaxed opacity-70 font-medium">{t('explore_perks')}</p>
           </div>
@@ -416,23 +561,9 @@ export default function Dashboard() {
             <ArrowRight className="w-4 h-4" />
           </div>
         </button>
-
-        {!isAdmin && (
-          <div className="p-8 sm:p-10 bg-on-surface/[0.03] rounded-[2rem] sm:rounded-[3rem] border border-outline border-dashed flex flex-col justify-center gap-6 text-center group card-hover">
-            <div className="w-16 h-16 bg-on-surface/5 rounded-full flex items-center justify-center mx-auto transition-transform group-hover:scale-110">
-               <MessageSquarePlus className="w-6 h-6 text-on-surface-variant opacity-40" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 mb-2">{t('concierge_services')}</p>
-              <h4 className="text-lg sm:text-xl font-black font-heading tracking-tight uppercase leading-tight">{t('vip_support')}</h4>
-            </div>
-            <button className="px-6 py-3 sm:px-8 sm:py-4 bg-on-surface text-surface rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-on-surface/10">
-              {t('contact_support')}
-            </button>
-          </div>
-        )}
       </div>
 
+      {/* Tier Benefits Modal */}
       <AnimatePresence>
         {showAllTiers && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -451,7 +582,7 @@ export default function Dashboard() {
             >
               <div className="p-8 sm:p-12 max-h-[85vh] overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8 sm:mb-12">
-                  <div>
+                  <div className="text-left">
                     <h2 className="text-3xl sm:text-4xl md:text-6xl text-on-surface font-black font-heading tracking-tight uppercase leading-[0.9]">{t('membership_tiers')}</h2>
                     <p className="text-xs sm:text-base text-on-surface-variant mt-2 font-medium opacity-60">{t('benefit_list_desc')}</p>
                   </div>
@@ -459,7 +590,7 @@ export default function Dashboard() {
                     onClick={() => setShowAllTiers(false)}
                     className="h-12 w-12 sm:h-16 sm:w-16 bg-on-surface text-surface rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl shrink-0"
                   >
-                    <ArrowRight className="w-6 h-6 sm:w-8 sm:h-8 rotate-180" />
+                    <Plus className="w-6 h-6 sm:w-8 sm:h-8 rotate-45" />
                   </button>
                 </div>
 
@@ -472,7 +603,7 @@ export default function Dashboard() {
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <div className="space-y-1">
+                        <div className="space-y-1 text-left">
                           {currentMember?.role === role && (
                             <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-2 block animate-pulse">{t('current_tier')}</span>
                           )}
@@ -484,12 +615,12 @@ export default function Dashboard() {
                       </div>
 
                       <div className="space-y-4">
-                        <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40">{t('included_benefits')}</p>
+                        <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 text-left">{t('included_benefits')}</p>
                         <div className="space-y-3">
                           {TIER_BENEFITS[role]?.map((benefit, i) => (
                             <div key={i} className="flex items-start gap-3">
                               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="text-sm font-bold text-on-surface-variant">{benefit}</span>
+                              <span className="text-sm font-bold text-on-surface-variant text-left">{benefit}</span>
                             </div>
                           ))}
                         </div>
@@ -502,54 +633,14 @@ export default function Dashboard() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
 
-      {!isAdmin && (
-        <section className="bg-surface-container border border-outline rounded-[2rem] sm:rounded-[4rem] overflow-hidden shadow-sm">
-          <div className="px-8 py-6 sm:px-12 sm:py-10 border-b border-outline flex items-center justify-between bg-on-surface/[0.01]">
-             <h3 className="text-xl sm:text-2xl font-black font-heading uppercase tracking-tight text-on-surface leading-none">{t('recent_activity')}</h3>
-             <Link to="/activities" className="text-primary text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] hover:underline underline-offset-4">{t('view_all')}</Link>
-          </div>
-          <div className="divide-y divide-outline/60">
-             {dashboardActivities.length > 0 ? (
-               dashboardActivities.map((act, idx) => {
-                 const Icon = act.icon;
-                 return (
-                   <div key={idx} className="px-8 py-6 sm:px-12 sm:py-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 transition-colors hover:bg-on-surface/[0.01] group">
-                     <div className="flex items-center gap-4 sm:gap-8 flex-1 min-w-0">
-                       <div className={`h-12 w-12 sm:h-16 sm:w-16 rounded-[1rem] sm:rounded-[1.25rem] ${act.iconBg} flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform shrink-0`}>
-                         <Icon className={`${act.iconColor} w-6 h-6 sm:w-8 sm:h-8`} />
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center gap-2">
-                           <p className="text-lg sm:text-xl font-bold text-on-surface truncate tracking-tight">{act.title}</p>
-                           {act.userName && isAdmin && (
-                             <span className="px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded uppercase tracking-widest border border-primary/20 leading-none h-fit">
-                               {act.userName}
-                             </span>
-                           )}
-                         </div>
-                         <p className="text-[10px] sm:text-xs text-on-surface-variant font-bold uppercase tracking-[0.15em] opacity-40 mt-0.5 sm:mt-1">{act.sub}</p>
-                       </div>
-                     </div>
-                     <div className="text-left sm:text-right shrink-0 pl-16 sm:pl-0">
-                       <p className="text-lg sm:text-xl font-black text-on-surface truncate font-mono tracking-tighter tabular-nums leading-none">
-                         {act.amount || act.status || act.name || act.time}
-                       </p>
-                     </div>
-                   </div>
-                 );
-               })
-             ) : (
-               <div className="p-16 sm:p-20 text-center">
-                  <div className="h-20 w-20 sm:h-24 sm:w-24 bg-on-surface/5 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 opacity-20">
-                     <CreditCard className="w-10 h-10 sm:w-12 sm:h-12" />
-                  </div>
-                  <p className="text-on-surface-variant text-base sm:text-lg font-bold italic opacity-40">{t('history_indexed')}</p>
-               </div>
-             )}
-          </div>
-        </section>
-      )}
+function InViewContainer({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full h-full">
+      {children}
     </div>
   );
 }
