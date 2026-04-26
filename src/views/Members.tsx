@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import { useApp, Member } from '../context/AppContext';
 import { ALL_ROLES, TIER_BENEFITS, TIER_COLORS } from '../constants';
 
-type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
+type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category' | 'totalTopUp';
 type SortDirection = 'asc' | 'desc' | null;
 
 const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other', 'donors', 'general'];
@@ -18,6 +18,9 @@ export default function Members() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteType, setDeleteType] = useState<'single' | 'bulk'>('single');
+  const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [editForm, setEditForm] = useState<Member | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -72,18 +75,30 @@ export default function Members() {
     setSelectedMember({ ...member, status: 'Active' });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(t('are_you_sure'))) return;
-    await deleteMember(id);
-    setSelectedMember(null);
-    setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+  const handleDelete = (id: string) => {
+    setMemberToDelete(id);
+    setDeleteType('single');
+    setIsDeleting(true);
   };
 
-  const handleBulkDelete = async () => {
+  const confirmDelete = async () => {
+    if (deleteType === 'single' && memberToDelete) {
+      await deleteMember(memberToDelete);
+      setSelectedMember(null);
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== memberToDelete));
+    } else if (deleteType === 'bulk' && selectedIds.length > 0) {
+      await bulkDeleteMembers(selectedIds);
+      setSelectedIds([]);
+    }
+    setIsDeleting(false);
+    setMemberToDelete(null);
+    toast.success(t('delete_success') || 'ลบสมาชิกเรียบร้อยแล้ว');
+  };
+
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(t('are_you_sure'))) return;
-    await bulkDeleteMembers(selectedIds);
-    setSelectedIds([]);
+    setDeleteType('bulk');
+    setIsDeleting(true);
   };
 
   const handleBulkStatusUpdate = async (status: string) => {
@@ -162,8 +177,12 @@ export default function Members() {
 
     if (sortConfig.key && sortConfig.direction) {
       result.sort((a, b) => {
-        const valA = (a[sortConfig.key] || '').toLowerCase();
-        const valB = (b[sortConfig.key] || '').toLowerCase();
+        let valA = a[sortConfig.key] ?? '';
+        let valB = b[sortConfig.key] ?? '';
+        
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
@@ -210,22 +229,26 @@ export default function Members() {
       const fn = firstNames[Math.floor(Math.random() * firstNames.length)];
       const ln = lastNames[Math.floor(Math.random() * lastNames.length)];
       const name = `${fn} ${ln}`;
-      const spending = Math.floor(Math.random() * 200000);
+      const totalTopUp = Math.floor(Math.random() * 200000);
+      const balance = Math.floor(Math.random() * totalTopUp);
+      const spending = totalTopUp - balance;
       
-      // Determine role based on spending to keep it consistent with auto-upgrade logic
+      // Determine role based on totalTopUp to keep it consistent with auto-upgrade logic
       let role = 'Standard';
-      if (spending >= 150000) role = 'Legend';
-      else if (spending >= 75000) role = 'Founder';
-      else if (spending >= 35000) role = 'Diamond';
-      else if (spending >= 15000) role = 'Platinum';
-      else if (spending >= 5000) role = 'Gold';
-      else if (spending >= 1000) role = 'Silver';
+      if (totalTopUp >= 150000) role = 'Legend';
+      else if (totalTopUp >= 75000) role = 'Founder';
+      else if (totalTopUp >= 35000) role = 'Diamond';
+      else if (totalTopUp >= 15000) role = 'Platinum';
+      else if (totalTopUp >= 5000) role = 'Gold';
+      else if (totalTopUp >= 1000) role = 'Silver';
 
       return {
         name,
         email: `${fn.toLowerCase()}.${ln.toLowerCase()}${Math.floor(Math.random() * 9999)}@example.com`,
         role,
         spending,
+        totalTopUp,
+        balance,
         category: categories[Math.floor(Math.random() * categories.length)],
         status: Math.random() > 0.1 ? 'Active' : 'Pending',
         joinDate: new Date(Date.now() - Math.floor(Math.random() * 31536000000)).toISOString().split('T')[0], // Within last year
@@ -427,6 +450,52 @@ export default function Members() {
         })}
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {isDeleting && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDeleting(false)}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-outline-variant/30 text-center"
+            >
+              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl text-on-surface font-heading mb-2">{t('are_you_sure')}</h2>
+              <p className="text-on-surface-variant text-sm mb-8">
+                {deleteType === 'bulk' 
+                  ? t('delete_bulk_confirm', { count: selectedIds.length }) || `คุณแน่ใจหรือไม่ที่จะลบสมาชิกทั้ง ${selectedIds.length} คนนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้`
+                  : t('delete_confirm_desc') || 'คุณแน่ใจหรือไม่ที่จะลบสมาชิกคนนี้? ข้อมูลทั้งหมดจะถูกลบถาวร'}
+              </p>
+              
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsDeleting(false)}
+                  className="flex-1 py-3 bg-on-surface/5 text-on-surface font-bold rounded-xl hover:bg-on-surface/10 transition-colors"
+                >
+                  {t('cancel')}
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                >
+                  {t('delete_member')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Detail Modal */}
       <AnimatePresence>
         {selectedMember && (
@@ -487,6 +556,18 @@ export default function Members() {
                   <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
                     <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('join_date')}</p>
                     <p className="text-sm font-bold text-on-surface">{selectedMember.joinDate}</p>
+                  </div>
+                  <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('total_top_up')}</p>
+                    <p className="text-sm font-bold text-on-surface">฿{(selectedMember.totalTopUp || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('total_spent')}</p>
+                    <p className="text-sm font-bold text-on-surface">฿{(selectedMember.spending || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
+                    <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('balance')}</p>
+                    <p className="text-sm font-bold text-on-surface">฿{(selectedMember.balance || 0).toLocaleString()}</p>
                   </div>
                   <div className="bg-on-surface/5 p-4 rounded-2xl text-left">
                     <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{t('phone_number')}</p>
@@ -908,7 +989,7 @@ export default function Members() {
                 {[
                   { key: 'name', label: t('member') },
                   { key: 'role', label: t('member_tier') },
-                  { key: 'category', label: t('category') },
+                  { key: 'totalTopUp', label: t('top_up') },
                   { key: 'status', label: t('status') },
                   { key: 'joinDate', label: t('join_date') }
                 ].map(({ key, label }) => (
@@ -987,10 +1068,8 @@ export default function Members() {
                         {member.role}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 border border-outline px-3 py-1 bg-on-surface/[0.02] rounded-xl hover:opacity-80 transition-opacity">
-                        {t(member.category?.toLowerCase()) || member.category}
-                      </span>
+                    <td className="px-8 py-6 text-emerald-500 font-black font-mono text-xs tabular-nums">
+                      ฿{(member.totalTopUp || 0).toLocaleString()}
                     </td>
                     <td className="px-8 py-6">
                       <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl border ${

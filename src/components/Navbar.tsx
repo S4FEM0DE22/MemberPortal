@@ -9,7 +9,7 @@ interface NavbarProps {
 
 export default function Navbar({ onToggleMenu }: NavbarProps) {
   const location = useLocation();
-  const { theme, toggleTheme, t, logout, isAdmin, currentMember, user } = useApp();
+  const { theme, toggleTheme, t, logout, isAdmin, currentMember, user, language, setLanguage } = useApp();
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -18,6 +18,10 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
     } catch (error) {
       console.error("Logout Error: ", error);
     }
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'th' ? 'en' : 'th');
   };
 
   const navItems = [
@@ -63,6 +67,14 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-4">
+        <button 
+          onClick={toggleLanguage}
+          className="p-2.5 rounded-xl hover:bg-on-surface/5 transition-colors text-on-surface-variant border border-outline/50 font-black text-[10px] min-w-[42px]"
+          title={language === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+        >
+          {language.toUpperCase()}
+        </button>
+
         <button
           onClick={toggleTheme}
           className="p-2.5 rounded-xl hover:bg-on-surface/5 transition-colors text-on-surface-variant border border-outline/50"

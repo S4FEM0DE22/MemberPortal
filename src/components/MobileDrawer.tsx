@@ -10,7 +10,7 @@ interface MobileDrawerProps {
 
 export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
   const location = useLocation();
-  const { theme, toggleTheme, t, logout, isAdmin } = useApp();
+  const { theme, toggleTheme, t, logout, isAdmin, language, setLanguage } = useApp();
 
   const handleLogout = async () => {
     try {
@@ -19,6 +19,10 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
     } catch (error) {
       console.error("Logout Error: ", error);
     }
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'th' ? 'en' : 'th');
   };
 
   const navItems = [
@@ -88,6 +92,23 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
             </nav>
 
             <div className="p-2 space-y-1 border-t border-outline/50 bg-on-surface/[0.01]">
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center justify-between w-full px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-on-surface/5 transition-all group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-5 h-5 flex items-center justify-center font-black text-[10px] opacity-50 group-hover:opacity-100 border border-on-surface/20 rounded">
+                    {language.toUpperCase()}
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-[0.15em] opacity-60 group-hover:opacity-100">
+                    {language === 'th' ? 'เปลี่ยนเป็น English' : 'Switch to Thai'}
+                  </span>
+                </div>
+                <div className="w-10 h-5 rounded-full relative transition-all shadow-inner bg-outline/20 flex items-center justify-center">
+                   <span className="text-[8px] font-bold opacity-30">{language.toUpperCase()}</span>
+                </div>
+              </button>
+
               <button
                 onClick={toggleTheme}
                 className="flex items-center justify-between w-full px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-on-surface/5 transition-all group"

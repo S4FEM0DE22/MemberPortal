@@ -9,7 +9,8 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -99,6 +100,8 @@ export interface Member {
   phone?: string;
   address?: string;
   spending?: number;
+  balance?: number;
+  totalTopUp?: number;
 }
 
 export interface Activity {
@@ -132,6 +135,7 @@ interface AppContextType {
   bulkDeleteMembers: (ids: string[]) => Promise<void>;
   bulkUpdateMemberStatus: (ids: string[], status: string) => Promise<void>;
   exportMembers: () => Promise<void>;
+  topUp: (amount: number) => Promise<void>;
   purchaseItem: (amount: number) => Promise<void>;
   upgradeTier: (newRole: string, cost: number) => Promise<void>;
   logActivity: (activity: Omit<Activity, 'id' | 'timestamp' | 'time'>) => Promise<void>;
@@ -142,6 +146,7 @@ interface AppContextType {
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -185,6 +190,8 @@ const translations = {
     appearance: 'ความชอบ',
     dark_mode: 'โหมดมืด',
     dark_mode_desc: 'ปรับเปลี่ยนธีมของแอป',
+    light_mode: 'โหมดสว่าง',
+    light_mode_desc: 'ปรับเปลี่ยนธีมเป็นโหมดสว่าง',
     language_label: 'ภาษา',
     language_desc: 'เลือกภาษาที่คุณต้องการ',
     security: 'ความปลอดภัย',
@@ -286,11 +293,15 @@ const translations = {
     system: 'ระบบ',
     notification: 'การแจ้งเตือน',
     welcome_back: 'ยินดีต้อนรับกลับมา',
-    login_desc: 'กรุณากรอกข้อมูลเพื่อเข้าสู่ระบบ',
+    login_desc: 'เข้าสู่ระบบเพื่อจัดการสิทธิประโยชน์ส่วนตัว และติดตามกิจกรรมการเป็นสมาชิกของคุณในที่เดียว',
     password: 'รหัสผ่าน',
     forgot_password: 'ลืมรหัสผ่าน?',
     remember_me: 'จดจำฉันเป็นเวลา 30 วัน',
     login_button: 'เข้าสู่ระบบ',
+    reset_password: 'รีเซ็ตรหัสผ่าน',
+    reset_password_desc: 'ป้อนอีเมลของคุณเพื่อรับลิงก์รีเซ็ตรหัสผ่าน และเข้าถึงบัญชีของคุณอีกครั้ง',
+    reset_password_sent: 'ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว โปรดตรวจสอบกล่องขาเข้าของคุณ',
+    back_to_login: 'กลับไปหน้าเข้าสู่ระบบ',
     delete_member: 'ลบสมาชิก',
     unsuspend: 'ยกเลิกการระงับ',
     generate_random: 'สุ่มเพิ่มสมาชิก',
@@ -313,13 +324,20 @@ const translations = {
     no_account: "ยังไม่มีบัญชีใช่หรือไม่?",
     register_free: 'สมัครสมาชิกฟรี',
     start_journey: 'เริ่มต้นการเดินทางของคุณ',
-    register_desc_hero: 'ลงชื่อเข้าใช้เพื่อเข้าถึงฟีเจอร์พรีเมียม สร้างเครือข่าย และเติบโตไปกับชุมชนมืออาชีพของเรา',
-    feat_dashboard: 'เข้าถึงแดชบอร์ดส่วนตัว',
+    register_desc_hero: 'สมัครสมาชิกเพื่อเข้าถึงฟีเจอร์ระดับพรีเมียม จัดการกิจกรรมส่วนตัว และเติบโตไปพร้อมกับชุมชนอัจฉริยะของเรา',
+    feat_dashboard: 'แดชบอร์ดจัดการข้อมูลส่วนตัว',
     feat_mgmt: 'ระบบจัดการสมาชิกอัจฉริยะ',
     feat_perks: 'สิทธิประโยชน์และของรางวัลพิเศษ',
     feat_realtime: 'การแจ้งเตือนแบบเรียลไทม์',
-    register_new: 'ลงทะเบียนบัญชีใหม่',
-    create_account_desc: 'สร้างบัญชีของคุณเพื่อเริ่มต้น',
+    register_new: 'สมัครสมาชิกเพื่อเริ่มใช้งาน',
+    create_account_desc: 'ลงทะเบียนง่ายๆ เพียงไม่กี่ขั้นตอน เพื่อรับสิทธิพิเศษและเชื่อมต่อกับชุมชนของเรา',
+    wallet: 'กระเป๋าเงิน',
+    balance: 'ยอดคงเหลือ',
+    top_up: 'เติมเงิน',
+    top_up_success: 'เติมเงินสำเร็จแล้ว',
+    total_top_up: 'ยอดการเติมเงินสะสม',
+    select_amount: 'เลือกจำนวนเงิน',
+    custom_amount: 'ระบุจำนวนเงินเอง',
     or_signup_with: 'หรือสมัครสมาชิกด้วย',
     already_have_account: 'มีบัญชีอยู่แล้วใช่ไหม?',
     login_here: 'เข้าสู่ระบบที่นี่',
@@ -327,21 +345,22 @@ const translations = {
     agree_text: 'ฉันยอมรับใน',
     and: 'และ',
     sign_up: 'สร้างบัญชี',
+    confirm: 'ยืนยัน',
     or_continue: 'หรือดำเนินการต่อด้วย',
     privacy_policy: 'นโยบายความเป็นส่วนตัว',
     terms_service: 'เงื่อนไขการให้บริการ',
     contact_support: 'ติดต่อฝ่ายสนับสนุน',
-    elevate_network: 'ยกระดับเครือข่ายมืออาชีพของคุณ',
-    elevate_desc: 'เข้าถึงทรัพยากรพิเศษ จัดการสิทธิประโยชน์การเป็นสมาชิก และเชื่อมต่อกับผู้นำในอุตสาหกรรมในสภาพแวดล้อมที่เป็นโครงสร้างและมีประสิทธิภาพ',
+    elevate_network: 'ยกระดับการจัดการสมาชิกและสิทธิประโยชน์ของคุณ',
+    elevate_desc: 'เข้าถึงทรัพยากรพิเศษ ติดตามกิจกรรม และเชื่อมต่อกับชุมชนสมาชิกของเราในสภาพแวดล้อมที่ทันสมัยและปลอดภัย',
     active_members: 'สมาชิกที่ใช้งานอยู่',
     daily_activities: 'กิจกรรมรายวัน',
     spending: 'ยอดการใช้จ่าย',
     buy_item: 'ซื้อสินค้า',
     upgrade: 'อัปเกรดระดับ',
     upgrade_to: 'อัปเกรดเป็น {role}',
-    auto_upgrade_hint: 'ใช้จ่ายครบ {amount} เพื่ออัปเกรดเป็น {role}',
+    auto_upgrade_hint: 'เติมเงินเพิ่ม {amount} เพื่ออัปเกรดเป็น {role}',
     total_spent: 'ยอดรวมการใช้จ่าย',
-    shop_desc: 'สะสมยอดจากการซื้อสินค้าเพื่อเพิ่มระดับสมาชิก หรืออัปเกรดระดับได้ทันที',
+    shop_desc: 'สะสมยอดจากการเติมเงินเพื่อเพิ่มระดับสมาชิก หรืออัปเกรดระดับได้ทันที',
     realtime_feed: 'ฟีดระบบเรียลไทม์',
     end_of_updates: 'สิ้นสุดการอัปเดตล่าสุด',
     days_ago: '{days} วันที่แล้ว',
@@ -450,6 +469,8 @@ const translations = {
     appearance: 'Preferences',
     dark_mode: 'Dark Mode',
     dark_mode_desc: 'Change application theme',
+    light_mode: 'Light Mode',
+    light_mode_desc: 'Change to light theme',
     language_label: 'Language',
     language_desc: 'Choose your preferred language',
     security: 'Security',
@@ -552,11 +573,15 @@ const translations = {
     system: 'System',
     notification: 'Notification',
     welcome_back: 'Welcome Back',
-    login_desc: 'Please enter your details to sign in',
+    login_desc: 'Sign in to manage your personal benefits and track your membership activities in one place',
     password: 'Password',
     forgot_password: 'Forgot Password?',
     remember_me: 'Remember me for 30 days',
     login_button: 'Sign In',
+    reset_password: 'Reset Password',
+    reset_password_desc: 'Enter your email to receive a password reset link and regain access to your account',
+    reset_password_sent: 'Password reset email sent. Please check your inbox.',
+    back_to_login: 'Back to Login',
     delete_member: 'Delete Member',
     unsuspend: 'Unsuspend',
     generate_random: 'Randomly Add Members',
@@ -579,13 +604,20 @@ const translations = {
     no_account: "Don't have an account?",
     register_free: 'Sign up for free',
     start_journey: 'Start Your Journey',
-    register_desc_hero: 'Sign up to access premium features, build connections, and grow with our professional community.',
-    feat_dashboard: 'Access Personal Dashboard',
+    register_desc_hero: 'Sign up to access premium features, manage your personal activities, and grow with our smart community.',
+    feat_dashboard: 'Personal Management Dashboard',
     feat_mgmt: 'Smart Member Management',
     feat_perks: 'Exclusive Benefits & Perks',
     feat_realtime: 'Real-time Notifications',
-    register_new: 'Register New Account',
-    create_account_desc: 'Create your account to get started',
+    register_new: 'Join our Community',
+    create_account_desc: 'Sign up in just a few steps to unlock exclusive perks and connect with our members',
+    wallet: 'Wallet',
+    balance: 'Balance',
+    top_up: 'Top Up',
+    top_up_success: 'Top up successful',
+    total_top_up: 'Total Top Up Amount',
+    select_amount: 'Select Amount',
+    custom_amount: 'Enter Custom Amount',
     or_signup_with: 'Or Sign Up With',
     already_have_account: 'Already have an account?',
     login_here: 'Login Here',
@@ -593,21 +625,22 @@ const translations = {
     agree_text: 'I agree to the',
     and: 'and',
     sign_up: 'Create Account',
+    confirm: 'Confirm',
     or_continue: 'Or continue with',
     privacy_policy: 'Privacy Policy',
     terms_service: 'Terms of Service',
     contact_support: 'Contact Support',
-    elevate_network: 'Elevate your professional network',
-    elevate_desc: 'Access exclusive resources, manage membership benefits, and connect with industry leaders in a structured and efficient environment.',
+    elevate_network: 'Elevate your membership experience',
+    elevate_desc: 'Access exclusive resources, track activities, and connect with our community in a modern and secure environment.',
     active_members: 'Active Members',
     daily_activities: 'Daily Activities',
     spending: 'Spending',
     buy_item: 'Buy Item',
     upgrade: 'Upgrade Tier',
     upgrade_to: 'Upgrade to {role}',
-    auto_upgrade_hint: 'Spend {amount} more to upgrade to {role}',
+    auto_upgrade_hint: 'Top up {amount} more to upgrade to {role}',
     total_spent: 'Total Spent',
-    shop_desc: 'Accumulate spending from purchases to increase your tier, or upgrade directly.',
+    shop_desc: 'Accumulate top-up amounts to increase your tier, or upgrade directly.',
     realtime_feed: 'Real-time system feed',
     end_of_updates: 'End of recent updates',
     days_ago: '{days} days ago',
@@ -826,55 +859,61 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Check if member already exists in Firestore for this user
     if (user.email) {
       const q = query(collection(db, 'members'), where('email', '==', user.email));
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        const isPrimaryAdmin = user.email === 'noppanun47@gmail.com';
-        // First time Google login, create member record with user UID as document ID
-        await setDoc(doc(db, 'members', user.uid), {
-          name: user.displayName || 'Google User',
-          email: user.email,
-          role: 'Standard',
-          isAdmin: isPrimaryAdmin,
-          status: isPrimaryAdmin ? 'Active' : 'Pending',
-          joinDate: new Date().toISOString().split('T')[0],
-          avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'GU')}&background=random`,
-          category: 'Other',
-          spending: 0,
-          userId: user.uid
-        });
+      try {
+        const querySnapshot = await getDocs(q);
         
-        await logActivity({
-          title: t('new_member_registered'),
-          sub: `${user.displayName || 'Google User'} joined Standard Tier`,
-          type: 'member',
-          description: `New member registered via Google sign-in. Status: ${isPrimaryAdmin ? 'Active' : 'Pending'}`,
-          reference: `MEM-${user.uid.substring(0, 8).toUpperCase()}`,
-          userId: user.uid
-        });
-      } else {
-        // Member exists. Check if ID matches UID. If not, "claim" it.
-        const existingDoc = querySnapshot.docs[0];
-        if (existingDoc.id !== user.uid) {
-          const data = existingDoc.data();
+        if (querySnapshot.empty) {
+          const isPrimaryAdmin = user.email === 'noppanun47@gmail.com';
+          // First time Google login, create member record with user UID as document ID
           await setDoc(doc(db, 'members', user.uid), {
-            ...data,
-            userId: user.uid // Ensure UID is stored
-          });
-          await deleteDoc(doc(db, 'members', existingDoc.id));
-          
-          await logActivity({
-            title: t('account_verified'),
-            sub: `Account linked to UID`,
-            type: 'system',
-            description: `Manual member record linked to authenticated user UID.`,
-            reference: `LNK-${user.uid.substring(0, 8).toUpperCase()}`,
+            name: user.displayName || 'Google User',
+            email: user.email,
+            role: 'Standard',
+            isAdmin: isPrimaryAdmin,
+            status: isPrimaryAdmin ? 'Active' : 'Pending',
+            joinDate: new Date().toISOString().split('T')[0],
+            avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'GU')}&background=random`,
+            category: 'Other',
+            spending: 0,
+            balance: 0,
+            totalTopUp: 0,
             userId: user.uid
           });
-        } else if (!existingDoc.data().userId) {
-          // Just ensure userId field is present
-          await setDoc(doc(db, 'members', user.uid), { userId: user.uid }, { merge: true });
+          
+          await logActivity({
+            title: t('new_member_registered'),
+            sub: `${user.displayName || 'Google User'} joined Standard Tier`,
+            type: 'member',
+            description: `New member registered via Google sign-in. Status: ${isPrimaryAdmin ? 'Active' : 'Pending'}`,
+            reference: `MEM-${user.uid.substring(0, 8).toUpperCase()}`,
+            userId: user.uid
+          });
+        } else {
+          // Member exists. Check if ID matches UID. If not, "claim" it.
+          const existingDoc = querySnapshot.docs[0];
+          if (existingDoc.id !== user.uid) {
+            const data = existingDoc.data();
+            await setDoc(doc(db, 'members', user.uid), {
+              ...data,
+              userId: user.uid // Ensure UID is stored
+            });
+            await deleteDoc(doc(db, 'members', existingDoc.id));
+            
+            await logActivity({
+              title: t('account_verified'),
+              sub: `Account linked to UID`,
+              type: 'system',
+              description: `Manual member record linked to authenticated user UID.`,
+              reference: `LNK-${user.uid.substring(0, 8).toUpperCase()}`,
+              userId: user.uid
+            });
+          } else if (!existingDoc.data().userId) {
+            // Just ensure userId field is present
+            await setDoc(doc(db, 'members', user.uid), { userId: user.uid }, { merge: true });
+          }
         }
+      } catch (error) {
+        handleFirestoreError(error, OperationType.LIST, 'members/query');
       }
     }
   };
@@ -884,30 +923,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, pass: string, name: string) => {
-    // Check if member already exists first
-    const q = query(collection(db, 'members'), where('email', '==', email));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      throw new Error('Member with this email already exists in the system.');
-    }
-
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(userCredential.user, { displayName: name });
     
     const isPrimaryAdmin = email === 'noppanun47@gmail.com';
-    // Create member record with user UID as document ID
-    await setDoc(doc(db, 'members', userCredential.user.uid), {
-      name,
-      email,
-      role: 'Standard',
-      isAdmin: isPrimaryAdmin,
-      status: isPrimaryAdmin ? 'Active' : 'Pending',
-      joinDate: new Date().toISOString().split('T')[0],
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-      category: 'Other',
-      spending: 0
-    });
+
+    // Check if a member record already exists for this email (potentially added by admin)
+    const q = query(collection(db, 'members'), where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const existingDoc = querySnapshot.docs[0];
+      // Claim the existing record by moving it to the new UID
+      const data = existingDoc.data();
+      await setDoc(doc(db, 'members', userCredential.user.uid), {
+        ...data,
+        name, // Prefer the name they just entered
+        userId: userCredential.user.uid,
+        avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+      });
+      
+      if (existingDoc.id !== userCredential.user.uid) {
+        await deleteDoc(doc(db, 'members', existingDoc.id));
+      }
+    } else {
+      // Create new member record
+      await setDoc(doc(db, 'members', userCredential.user.uid), {
+        name,
+        email,
+        role: 'Standard',
+        isAdmin: isPrimaryAdmin,
+        status: isPrimaryAdmin ? 'Active' : 'Pending',
+        joinDate: new Date().toISOString().split('T')[0],
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        category: 'Other',
+        spending: 0,
+        balance: 0,
+        totalTopUp: 0,
+        userId: userCredential.user.uid
+      });
+    }
 
     await logActivity({
       title: t('new_member_registered'),
@@ -921,6 +976,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await signOut(auth);
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast.success(t('reset_password_sent'));
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        toast.error(t('query_null') || 'Email not found');
+      } else {
+        toast.error(error.message);
+      }
+      throw error;
+    }
   };
 
   const addMember = async (member: Member) => {
@@ -1117,6 +1186,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const TIER_HIERARCHY = ['Standard', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Founder'];
 
+  const topUp = async (amount: number) => {
+    if (!user || !user.email) return;
+
+    try {
+      const q = query(collection(db, 'members'), where('email', '==', user.email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const memberDoc = querySnapshot.docs[0];
+        const memberData = memberDoc.data() as Member;
+        const currentBalance = memberData.balance || 0;
+        const currentTotalTopUp = memberData.totalTopUp || 0;
+        const newTotalTopUp = currentTotalTopUp + amount;
+
+        let newRole = memberData.role;
+        
+        // Auto-upgrade logic based on total top-up
+        if (newTotalTopUp >= 150000) newRole = 'Legend';
+        else if (newTotalTopUp >= 75000) newRole = 'Founder';
+        else if (newTotalTopUp >= 35000) newRole = 'Diamond';
+        else if (newTotalTopUp >= 15000) newRole = 'Platinum';
+        else if (newTotalTopUp >= 5000) newRole = 'Gold';
+        else if (newTotalTopUp >= 1000) newRole = 'Silver';
+
+        await updateDoc(doc(db, 'members', memberDoc.id), {
+          balance: currentBalance + amount,
+          totalTopUp: newTotalTopUp,
+          role: newRole
+        });
+
+        toast.success(t('top_up_success') || 'เติมเงินสำเร็จ');
+
+        await logActivity({
+          title: t('top_up'),
+          sub: `Top Up: ฿${amount.toLocaleString()}`,
+          amount: `฿${amount.toLocaleString()}`,
+          type: 'payment',
+          description: `User topped up balance. Total Top Up: ฿${newTotalTopUp.toLocaleString()}`,
+          reference: `TOP-${Math.random().toString(36).substring(7).toUpperCase()}`,
+          userId: user.uid
+        });
+
+        if (newRole !== memberData.role) {
+          await logActivity({
+            title: t('upgrade'),
+            sub: `Upgraded to ${newRole}`,
+            type: 'member',
+            description: `Member auto-upgraded due to top-up reaching ฿${newTotalTopUp.toLocaleString()}`,
+            reference: `UPG-${memberDoc.id.substring(0, 8).toUpperCase()}`,
+            userId: user.uid
+          });
+        }
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'top_up');
+    }
+  };
+
   const purchaseItem = async (amount: number) => {
     if (!user || !user.email) return;
     
@@ -1127,23 +1254,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!querySnapshot.empty) {
         const memberDoc = querySnapshot.docs[0];
         const memberData = memberDoc.data() as Member;
+        const currentBalance = memberData.balance || 0;
+
+        if (currentBalance < amount) {
+          toast.error(t('insufficient_funds') || 'ยอดเงินไม่เพียงพอ');
+          return;
+        }
+
         const currentSpending = memberData.spending || 0;
         const newSpending = currentSpending + amount;
+        const newBalance = currentBalance - amount;
         
-        let newRole = memberData.role;
-        
-        // Auto-upgrade logic based on spending
-        if (newSpending >= 150000) newRole = 'Legend';
-        else if (newSpending >= 75000) newRole = 'Founder';
-        else if (newSpending >= 35000) newRole = 'Diamond';
-        else if (newSpending >= 15000) newRole = 'Platinum';
-        else if (newSpending >= 5000) newRole = 'Gold';
-        else if (newSpending >= 1000) newRole = 'Silver';
-
         // Update preserving isAdmin status
         await updateDoc(doc(db, 'members', memberDoc.id), {
+          balance: newBalance,
           spending: newSpending,
-          role: newRole,
           isAdmin: memberData.isAdmin || user.email === 'noppanun47@gmail.com'
         });
 
@@ -1154,21 +1279,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           sub: `Purchase: ฿${amount.toLocaleString()}`,
           amount: `฿${amount.toLocaleString()}`,
           type: 'payment',
-          description: `Successful item purchase. Current Tier: ${newRole}`,
+          description: `Successful item purchase.`,
           reference: `PUR-${Math.random().toString(36).substring(7).toUpperCase()}`,
           userId: user.uid
         });
-
-        if (newRole !== memberData.role) {
-          await logActivity({
-            title: t('upgrade'),
-            sub: `Upgraded to ${newRole}`,
-            type: 'member',
-            description: `Member auto-upgraded due to spending reaching ฿${newSpending.toLocaleString()}`,
-            reference: `UPG-${memberDoc.id.substring(0, 8).toUpperCase()}`,
-            userId: user.uid
-          });
-        }
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'purchase_item');
@@ -1185,9 +1299,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!querySnapshot.empty) {
         const memberDoc = querySnapshot.docs[0];
         const memberData = memberDoc.data() as Member;
+        const currentBalance = memberData.balance || 0;
+
+        if (currentBalance < cost) {
+          toast.error(t('insufficient_funds') || 'ยอดเงินไม่เพียงพอ');
+          return;
+        }
+
         const currentSpending = memberData.spending || 0;
         
         await updateDoc(doc(db, 'members', memberDoc.id), {
+          balance: currentBalance - cost,
           spending: currentSpending + cost,
           role: newRole,
           // Force admin back if they were an admin
@@ -1238,7 +1360,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signInWithEmail,
       signUpWithEmail,
+      resetPassword,
       logout,
+      topUp,
       purchaseItem,
       upgradeTier,
       logActivity

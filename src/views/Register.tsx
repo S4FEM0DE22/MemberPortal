@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, BadgeCheck, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User, BadgeCheck, ArrowRight, Eye, EyeOff, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../context/AppContext';
 
 export default function Register() {
-  const { t, signUpWithEmail, signIn } = useApp();
+  const { t, signUpWithEmail, signIn, theme, toggleTheme, language, setLanguage } = useApp();
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -43,7 +43,46 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-surface">
+    <div className="min-h-screen flex flex-col md:flex-row bg-surface text-on-surface">
+      {/* Top Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 h-20 flex items-center justify-center px-6 md:px-12 pointer-events-none">
+        <div className="w-full max-w-7xl flex items-center justify-between pointer-events-auto">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform duration-300">
+              <BadgeCheck className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-heading text-xl font-black text-on-surface uppercase tracking-tighter hidden sm:block">
+              Member<span className="text-primary italic">Portal</span>
+              <span className="w-1.5 h-1.5 bg-primary rounded-full inline-block ml-1"></span>
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-2 bg-surface/60 backdrop-blur-xl border border-on-surface/10 p-1.5 rounded-2xl shadow-2xl shadow-black/10">
+            <button
+              onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
+              className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-on-surface/10 transition-all text-on-surface font-black text-xs group"
+              title={language === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+            >
+              <span className="group-hover:scale-110 transition-transform">{language.toUpperCase()}</span>
+            </button>
+
+            <div className="w-px h-6 bg-on-surface/10 mx-1"></div>
+
+            <button
+              onClick={toggleTheme}
+              className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-on-surface/10 transition-all text-on-surface group"
+              title={theme === 'light' ? t('dark_mode') : t('light_mode')}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+              ) : (
+                <Sun className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {/* Left Side: Hero/Branding (Shared with Login) */}
       <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-primary relative overflow-hidden items-center justify-center p-8">
         <div className="absolute inset-0 z-0">
@@ -60,12 +99,14 @@ export default function Register() {
           transition={{ duration: 0.6 }}
           className="relative z-10 max-w-lg text-on-primary"
         >
-          <div className="mb-8 flex items-center gap-2">
-            <BadgeCheck className="w-12 h-12 fill-white text-primary" />
-            <h1 className="font-heading text-4xl font-extrabold tracking-tight">MemberPortal</h1>
+          <div className="mb-8 flex items-center gap-4">
+            <div className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center p-2.5 border border-white/20">
+              <BadgeCheck className="w-full h-full text-white" />
+            </div>
+            <h1 className="font-heading text-4xl font-black tracking-tighter uppercase text-white">Member<span className="opacity-50">Portal</span></h1>
           </div>
-          <h2 className="font-heading text-3xl font-semibold mb-4 text-white">{t('start_journey')}</h2>
-          <p className="text-lg opacity-90 leading-relaxed mb-8">
+          <h2 className="font-heading text-3xl font-bold mb-4 text-white">{t('start_journey')}</h2>
+          <p className="text-lg font-medium opacity-100 leading-relaxed mb-8 text-white/90">
             {t('register_desc_hero')}
           </p>
           <ul className="space-y-4">
@@ -77,9 +118,9 @@ export default function Register() {
             ].map((item, idx) => (
               <li key={idx} className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-medium">{item}</span>
+                <span className="font-bold text-white tracking-tight">{item}</span>
               </li>
             ))}
           </ul>
@@ -95,17 +136,17 @@ export default function Register() {
           className="w-full max-w-[480px] my-auto"
         >
           {/* Mobile Logo */}
-          <div className="md:hidden flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-              <BadgeCheck className="w-8 h-8 fill-white text-primary" />
+          <div className="md:hidden flex flex-col items-center mb-8 text-center">
+            <div className="w-16 h-16 bg-primary rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-primary/30 border border-primary-container/20">
+              <BadgeCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="font-heading text-3xl font-bold text-primary">MemberPortal</h1>
+            <h1 className="font-heading text-3xl font-black text-on-surface uppercase tracking-tighter">Member<span className="text-primary">Portal</span></h1>
           </div>
 
           <div className="bg-surface-container border border-outline-variant p-8 md:p-10 rounded-2xl shadow-sm">
             <header className="mb-8">
               <h2 className="font-heading text-2xl font-bold mb-1 text-on-surface">{t('register_new')}</h2>
-              <p className="text-sm text-on-surface-variant">{t('create_account_desc')}</p>
+              <p className="text-sm text-on-surface font-medium opacity-80">{t('create_account_desc')}</p>
             </header>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -115,11 +156,11 @@ export default function Register() {
                 </div>
               )}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="fullName">{t('full_name')}</label>
+                <label className="text-sm font-bold text-on-surface" htmlFor="fullName">{t('full_name')}</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface/40 w-5 h-5 pointer-events-none" />
                   <input
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-outline"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-outline bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-on-surface/30"
                     id="fullName"
                     placeholder={t('name_placeholder')}
                     required
@@ -131,11 +172,11 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="email">{t('email')}</label>
+                <label className="text-sm font-bold text-on-surface" htmlFor="email">{t('email')}</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface/40 w-5 h-5 pointer-events-none" />
                   <input
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-outline"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-outline bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-on-surface/30"
                     id="email"
                     placeholder="name@company.com"
                     required
@@ -147,11 +188,11 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="password">{t('password')}</label>
+                <label className="text-sm font-bold text-on-surface" htmlFor="password">{t('password')}</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface/40 w-5 h-5 pointer-events-none" />
                   <input
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-outline"
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-outline bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-sm placeholder:text-on-surface/30"
                     id="password"
                     placeholder="••••••••"
                     required
@@ -162,12 +203,12 @@ export default function Register() {
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface/40 hover:text-on-surface transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-on-surface-variant mt-1">{t('pwd_hint')}</p>
+                <p className="text-[10px] text-on-surface/60 mt-1 font-medium">{t('pwd_hint')}</p>
               </div>
 
               <div className="flex items-start gap-3 cursor-pointer group mt-2">
@@ -194,25 +235,25 @@ export default function Register() {
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-outline-variant flex flex-col items-center gap-6">
+            <div className="mt-8 pt-6 border-t border-outline flex flex-col items-center gap-6">
               <div className="flex items-center gap-4 w-full">
-                <div className="h-px bg-outline-variant flex-1"></div>
-                <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">{t('or_signup_with')}</span>
-                <div className="h-px bg-outline-variant flex-1"></div>
+                <div className="h-px bg-outline/40 flex-1"></div>
+                <span className="text-[10px] font-black text-on-surface/50 uppercase tracking-widest">{t('or_continue')}</span>
+                <div className="h-px bg-outline/40 flex-1"></div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 w-full">
+              <div className="flex flex-col gap-4 w-full">
                 <button 
                   onClick={handleGoogleSignIn}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 border border-outline-variant rounded-xl text-sm font-semibold hover:bg-on-surface/5 transition-colors text-on-surface"
+                  className="flex items-center justify-center gap-3 px-4 py-3 border border-outline rounded-xl text-sm font-bold hover:bg-on-surface/5 transition-all text-on-surface hover:shadow-sm active:scale-[0.99]"
                 >
                   <img alt="Google" className="w-5 h-5" src="https://www.google.com/favicon.ico" />
                   <span>Google</span>
                 </button>
               </div>
 
-              <p className="text-sm text-on-surface-variant">
-                {t('already_have_account')} <Link to="/login" className="text-primary font-bold hover:underline">{t('login_here')}</Link>
+              <p className="text-sm text-on-surface font-medium">
+                {t('already_have_account')} <Link to="/login" className="text-primary font-black hover:underline">{t('login_here')}</Link>
               </p>
             </div>
           </div>

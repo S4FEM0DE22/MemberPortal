@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, CheckCircle2, Copy, CreditCard, ChevronRight, Mail, Phone, Lock, Eye, EyeOff, ShieldCheck, BellRing, Info, Calendar, Save, BadgeCheck } from 'lucide-react';
+import { Camera, CheckCircle2, Copy, CreditCard, ChevronRight, Mail, Phone, Lock, Eye, EyeOff, ShieldCheck, BellRing, Info, Calendar, Save, BadgeCheck, Wallet, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -310,6 +310,20 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary opacity-50" />
                   <p className="font-black text-on-surface text-lg font-heading">{currentMember?.joinDate || t('member_since_date')}</p>
+                </div>
+              </div>
+              <div className="p-6 bg-on-surface/[0.03] rounded-[2rem] border border-outline-variant/10">
+                <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-[0.3em] block mb-2 opacity-60">{t('total_top_up')}</label>
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-5 h-5 text-emerald-500 opacity-50" />
+                  <p className="font-black text-on-surface text-lg font-heading tracking-tight">฿{(currentMember?.totalTopUp || 0).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="p-6 bg-on-surface/[0.03] rounded-[2rem] border border-outline-variant/10">
+                <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-[0.3em] block mb-2 opacity-60">{t('balance')}</label>
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-5 h-5 text-emerald-500 opacity-50" />
+                  <p className="font-black text-on-surface text-lg font-heading tracking-tight">฿{(currentMember?.balance || 0).toLocaleString()}</p>
                 </div>
               </div>
               <div className="p-6 bg-on-surface/[0.03] rounded-[2rem] border border-outline-variant/10">

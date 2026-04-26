@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
-import { CreditCard, ShoppingBag, ShieldCheck, BadgeCheck, Zap, Star, Diamond, Crown, Trophy, Sparkles, Gift, Clock, CheckCircle2, ShoppingCart } from 'lucide-react';
+import { CreditCard, ShoppingBag, ShieldCheck, BadgeCheck, Zap, Star, Diamond, Crown, Trophy, Sparkles, Gift, Clock, CheckCircle2, ShoppingCart, Wallet, Plus, X, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 
 export default function Shop() {
-  const { t, currentMember, purchaseItem, upgradeTier } = useApp();
+  const { t, currentMember, purchaseItem, upgradeTier, topUp } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'items' | 'upgrades'>('items');
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState<number | null>(null);
+  const [customAmount, setCustomAmount] = useState<string>('');
+
+  const TOP_UP_OPTIONS = [500, 1000, 2000, 5000, 10000, 20000];
+
+  const handleTopUp = async () => {
+    const finalAmount = topUpAmount || parseInt(customAmount);
+    if (!finalAmount || isNaN(finalAmount)) return;
+    setIsProcessing(true);
+    try {
+      await topUp(finalAmount);
+      setShowTopUp(false);
+      setTopUpAmount(null);
+      setCustomAmount('');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handlePurchase = async (item: any) => {
     setIsProcessing(true);
@@ -63,19 +82,57 @@ export default function Shop() {
           </p>
         </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-surface-container border border-outline-variant/30 p-6 rounded-[2.5rem] flex items-center gap-6 shadow-sm"
-        >
-          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-            <ShoppingCart className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 mb-1">{t('total_spent')}</p>
-            <p className="text-2xl font-black text-primary font-heading tracking-tight">฿{(currentMember?.spending || 0).toLocaleString()}</p>
-          </div>
-        </motion.div>
+        <div className="flex flex-col sm:flex-row items-stretch gap-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-surface-container border border-outline-variant/30 p-6 rounded-[2.5rem] flex items-center gap-6 shadow-sm group hover:border-primary/50 transition-all cursor-pointer"
+            onClick={() => setShowTopUp(true)}
+          >
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 mb-1">{t('balance')}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-2xl font-black text-primary font-heading tracking-tight">฿{(currentMember?.balance || 0).toLocaleString()}</p>
+                <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
+                  <Plus className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="bg-surface-container border border-outline-variant/30 p-6 rounded-[2.5rem] flex items-center gap-6 shadow-sm"
+          >
+            <div className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 mb-1">{t('total_top_up')}</p>
+              <p className="text-2xl font-black text-emerald-600 font-heading tracking-tight">฿{(currentMember?.totalTopUp || 0).toLocaleString()}</p>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 }}
+            className="bg-surface-container border border-outline-variant/30 p-6 rounded-[2.5rem] flex items-center gap-6 shadow-sm"
+          >
+            <div className="h-12 w-12 rounded-2xl bg-on-surface/5 text-on-surface-variant flex items-center justify-center">
+              <ShoppingCart className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 mb-1">{t('total_spent')}</p>
+              <p className="text-2xl font-black text-on-surface-variant font-heading tracking-tight opacity-60">฿{(currentMember?.spending || 0).toLocaleString()}</p>
+            </div>
+          </motion.div>
+        </div>
       </header>
 
       {/* Tabs */}
@@ -218,6 +275,92 @@ export default function Shop() {
           </div>
         </div>
       </section>
+
+      {/* Top Up Modal */}
+      <AnimatePresence>
+        {showTopUp && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTopUp(false)}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-surface-container rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl border border-outline-variant/30"
+            >
+              <button 
+                onClick={() => setShowTopUp(false)}
+                className="absolute right-6 top-6 p-2 hover:bg-on-surface/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-outline" />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center mx-auto mb-4 rotate-3">
+                  <Wallet className="w-10 h-10" />
+                </div>
+                <h2 className="text-3xl text-on-surface font-heading font-black tracking-tight">{t('top_up')}</h2>
+                <p className="text-on-surface-variant font-medium mt-2">{t('select_amount')}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {TOP_UP_OPTIONS.map(amount => (
+                  <button 
+                    key={amount}
+                    onClick={() => {
+                      setTopUpAmount(amount);
+                      setCustomAmount('');
+                    }}
+                    className={`p-6 rounded-3xl border-2 transition-all font-black text-lg ${
+                      topUpAmount === amount 
+                        ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-105' 
+                        : 'bg-surface border-outline-variant/30 text-on-surface hover:border-primary/50'
+                    }`}
+                  >
+                    ฿{amount.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-8">
+                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest ml-4 mb-2 block opacity-60">
+                  {t('custom_amount')}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-on-surface-variant font-black text-xl opacity-40">฿</span>
+                  <input 
+                    type="number"
+                    value={customAmount}
+                    onChange={(e) => {
+                      setCustomAmount(e.target.value);
+                      setTopUpAmount(null);
+                    }}
+                    placeholder="Enter amount..."
+                    className="w-full h-16 pl-12 pr-6 rounded-[1.5rem] bg-surface border-2 border-outline-variant/30 focus:border-primary outline-none transition-all font-black text-xl text-on-surface"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleTopUp}
+                disabled={(!topUpAmount && !customAmount) || isProcessing}
+                className="w-full py-5 bg-primary text-white rounded-3xl font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/30 hover:bg-primary-container active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+              >
+                {isProcessing ? t('processing') : t('confirm') || 'Confirm'}
+              </button>
+
+              <p className="text-[10px] text-center text-on-surface-variant font-black uppercase tracking-widest mt-6 opacity-40">
+                Secure SSL Encrypted Payment
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -53,31 +53,47 @@ service cloud.firestore {
                data.email is string && data.email.size() <= 100 &&
                data.status in ['Active', 'Pending', 'Suspended'] &&
                data.role is string && data.role.size() <= 100 &&
-               data.joinDate is string && data.joinDate.size() <= 50 &&
-               data.avatar is string && data.avatar.size() <= 2000 &&
+               data.joinDate is string && data.joinDate.size() <= 60 &&
+               data.avatar is string && data.avatar.size() <= 2500 &&
                data.category is string && data.category.size() <= 100 &&
                (!('isAdmin' in data) || data.isAdmin is bool) &&
                (!('spending' in data) || (data.spending is number)) &&
+               (!('balance' in data) || (data.balance is number)) &&
+               (!('totalTopUp' in data) || (data.totalTopUp is number)) &&
                (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
-               (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+               (!('address' in data) || (data.address is string && data.address.size() <= 500)) &&
                (!('userId' in data) || (data.userId is string));
       }
 
-      // Restrict read to admins and owners
-      allow get, list: if isSignedIn() && (isSystemAdmin() || isOwner(resource.data.email));
+      // Restrict read:
+      // 1. Admins can read all.
+      // 2. Owners can read their own (by docId == uid OR by email).
+      allow get: if isSignedIn() && (
+        memberId == request.auth.uid || 
+        isSystemAdmin() || 
+        isOwner(resource.data.email)
+      );
       
-      allow create: if isSignedIn() && isValidMember(incoming()) && (isOwner(incoming().email) || isSystemAdmin());
+      allow list: if isSignedIn() && (
+        isSystemAdmin() || 
+        isOwner(resource.data.email)
+      );
+      
+      allow create: if isSignedIn() && isValidMember(incoming()) && (
+        isOwner(incoming().email) || 
+        isSystemAdmin()
+      );
 
       allow update: if isSignedIn() && (
         isSystemAdmin() || 
         (isOwner(existing().email) && 
          isValidMember(incoming()) && 
          incoming().email == existing().email &&
-         incoming().isAdmin == existing().isAdmin && 
+         incoming().isAdmin == (existing().keys().contains('isAdmin') ? existing().isAdmin : false) && 
          incoming().status == existing().status)
       );
 
-      allow delete: if isSystemAdmin() || (isSignedIn() && isOwner(existing().email));
+      allow delete: if isSystemAdmin();
     }
 
     // --- Activities Collection ---

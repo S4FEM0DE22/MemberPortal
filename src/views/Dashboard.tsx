@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Users, TrendingUp, UserPlus, CreditCard, BadgeCheck, FileEdit, ArrowRight, MessageSquarePlus, FileSpreadsheet, ChevronRight, CheckCircle2, Star } from 'lucide-react';
+import { Users, TrendingUp, UserPlus, CreditCard, BadgeCheck, FileEdit, ArrowRight, MessageSquarePlus, FileSpreadsheet, ChevronRight, CheckCircle2, Star, Wallet, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { Link } from 'react-router-dom';
@@ -79,8 +79,9 @@ export default function Dashboard() {
   ];
   
   const currentSpending = currentMember?.spending || 0;
-  const nextTier = nextTiers.find(t => t.min > currentSpending);
-  const progress = nextTier ? Math.min((currentSpending / nextTier.min) * 100, 100) : 100;
+  const currentTotalTopUp = currentMember?.totalTopUp || 0;
+  const nextTier = nextTiers.find(t => t.min > currentTotalTopUp);
+  const progress = nextTier ? Math.min((currentTotalTopUp / nextTier.min) * 100, 100) : 100;
 
   return (
     <div className="space-y-12 pb-16">
@@ -120,9 +121,26 @@ export default function Dashboard() {
                 <TrendingUp className="w-4 h-4 sm:w-5 h-5" />
               </div>
             </div>
-            <div>
-              <div className="text-[11px] sm:text-sm font-bold text-on-surface-variant/40 mb-1">THB</div>
-              <h3 className="text-4xl sm:text-5xl font-black text-on-surface font-mono tracking-tighter tabular-nums">฿{currentSpending.toLocaleString()}</h3>
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+              <div>
+                <div className="text-[11px] sm:text-sm font-bold text-on-surface-variant/40 mb-1">THB {t('total_top_up')}</div>
+                <h3 className="text-3xl sm:text-4xl font-black text-on-surface font-mono tracking-tighter tabular-nums">฿{currentTotalTopUp.toLocaleString()}</h3>
+              </div>
+              <div className="h-10 w-px bg-outline/20 hidden sm:block mx-4" />
+              <div>
+                <div className="text-[11px] sm:text-sm font-bold text-on-surface-variant/40 mb-1">THB {t('total_spent')}</div>
+                <h3 className="text-2xl sm:text-3xl font-black text-on-surface font-mono tracking-tighter tabular-nums opacity-60">฿{currentSpending.toLocaleString()}</h3>
+              </div>
+              <div className="h-10 w-px bg-outline/20 hidden sm:block mx-4" />
+              <Link to="/shop" className="group/wallet">
+                <div className="text-[11px] sm:text-sm font-bold text-emerald-500/60 mb-1 flex items-center gap-2 group-hover/wallet:text-emerald-500 transition-colors">
+                  {t('balance')}
+                  <Plus className="w-3 h-3" />
+                </div>
+                <h3 className="text-3xl sm:text-4xl font-black text-emerald-500 font-mono tracking-tighter tabular-nums group-hover/wallet:scale-105 transition-transform origin-left">
+                  ฿{(currentMember?.balance || 0).toLocaleString()}
+                </h3>
+              </Link>
             </div>
             {nextTier && (
               <div className="space-y-4 pt-4 border-t border-outline-variant/30">
@@ -138,7 +156,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <p className="text-[10px] text-on-surface-variant font-medium leading-relaxed italic opacity-70">
-                  {t('auto_upgrade_hint').replace('{amount}', `฿${(nextTier.min - currentSpending).toLocaleString()}`).replace('{role}', t(nextTier.role.toLowerCase()) || nextTier.role)}
+                  {t('auto_upgrade_hint').replace('{amount}', `฿${(nextTier.min - currentTotalTopUp).toLocaleString()}`).replace('{role}', t(nextTier.role.toLowerCase()) || nextTier.role)}
                 </p>
               </div>
             )}
