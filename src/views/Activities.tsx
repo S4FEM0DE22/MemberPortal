@@ -73,7 +73,7 @@ export default function Activities() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-10 shadow-2xl border border-outline-variant/30"
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-6 sm:p-10 shadow-2xl border border-outline-variant/30 max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setSelectedActivity(null)}
@@ -130,32 +130,36 @@ export default function Activities() {
         )}
       </AnimatePresence>
 
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-4 overflow-hidden">
+        <div className="flex items-start gap-4">
           <Link 
             to="/" 
-            className="p-2 hover:bg-on-surface/10 rounded-xl transition-colors"
+            className="p-3 hover:bg-on-surface/5 rounded-2xl transition-all border border-outline/50 mt-1"
           >
             <ChevronLeft className="w-6 h-6 text-on-surface" />
           </Link>
-          <div>
-            <h1 className="text-4xl text-on-surface font-heading uppercase tracking-tight">{t('activities')}</h1>
-            <p className="text-on-surface-variant mt-1">{t('activities_desc')}</p>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-8 bg-primary rounded-full" />
+              <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{t('system_logs')}</p>
+            </div>
+            <h1 className="text-4xl md:text-5xl text-on-surface font-heading font-extrabold tracking-tight underline decoration-primary/20 decoration-8 underline-offset-8 lowercase first-letter:uppercase">{t('activities')}</h1>
+            <p className="text-on-surface-variant font-medium mt-6 max-w-md">{t('activities_desc')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-4 h-4 sm:w-5 sm:h-5" />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('search_activities')} 
-              className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
+              className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 rounded-xl border border-outline-variant bg-surface-container text-xs sm:text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
             />
           </div>
-          <button className="p-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface hover:bg-on-surface/5 transition-colors shadow-sm">
-            <Filter className="w-5 h-5" />
+          <button className="p-2 sm:p-2.5 border border-outline-variant rounded-xl bg-surface-container text-on-surface hover:bg-on-surface/5 transition-colors shadow-sm">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       </header>
@@ -164,10 +168,10 @@ export default function Activities() {
         <div className="lg:col-span-3">
           {/* Technical Data Header */}
           <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-4 border-b border-outline/50 mb-4 items-center">
-            <div className="col-span-1 text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Class</div>
-            <div className="col-span-6 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 pl-4 text-left">Activity / Identification</div>
-            <div className="col-span-3 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-right">Value / Status</div>
-            <div className="col-span-2 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-right pr-4">Timestamp</div>
+            <div className="col-span-1 text-[10px] font-black uppercase tracking-[0.3em] opacity-40">{t('class')}</div>
+            <div className="col-span-6 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 pl-4 text-left">{t('activity_id')}</div>
+            <div className="col-span-3 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-right">{t('value_status')}</div>
+            <div className="col-span-2 text-[10px] font-black uppercase tracking-[0.3em] opacity-40 text-right pr-4">{t('timestamp')}</div>
           </div>
 
           <div className="space-y-[1px] bg-outline/20 border border-outline/50 rounded-3xl overflow-hidden shadow-2xl shadow-primary/5">
@@ -182,40 +186,40 @@ export default function Activities() {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ delay: idx * 0.03 }}
                     onClick={() => setSelectedActivity(act)}
-                    className="grid grid-cols-1 md:grid-cols-12 gap-4 px-8 py-6 bg-surface-container hover:bg-on-surface/[0.03] transition-all group cursor-pointer items-center relative"
+                    className="flex flex-col sm:grid sm:grid-cols-12 gap-4 px-6 sm:px-8 py-6 bg-surface-container hover:bg-on-surface/[0.03] transition-all group cursor-pointer items-start sm:items-center relative border-b border-outline/30 last:border-0"
                   >
-                    <div className="md:col-span-1 flex justify-center">
-                      <div className={`h-12 w-12 rounded-xl ${act.iconBg} flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner`}>
-                        <Icon className={`${act.iconColor} w-6 h-6`} />
+                    <div className="sm:col-span-1 flex shrink-0">
+                      <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl ${act.iconBg} flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner`}>
+                        <Icon className={`${act.iconColor} w-5 h-5 sm:w-6 sm:h-6`} />
                       </div>
                     </div>
                     
-                    <div className="md:col-span-6 flex flex-col justify-center min-w-0 md:pl-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-bold text-on-surface truncate tracking-tight">{act.title}</h3>
+                    <div className="sm:col-span-6 flex flex-col justify-center min-w-0 sm:pl-4 w-full">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-sm sm:text-base font-bold text-on-surface truncate tracking-tight">{act.title}</h3>
                         {act.status && (
-                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[9px] font-black rounded uppercase tracking-widest border border-emerald-500/20 leading-none">
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[8px] sm:text-[9px] font-black rounded uppercase tracking-widest border border-emerald-500/20 leading-none">
                             {act.status}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-on-surface-variant font-mono tracking-tight opacity-50 uppercase">{act.reference}</p>
+                      <p className="text-[10px] sm:text-[11px] text-on-surface-variant font-mono tracking-tight opacity-50 uppercase truncate">{act.reference}</p>
                     </div>
 
-                    <div className="md:col-span-3 flex md:flex-col items-center md:items-end justify-between md:justify-center gap-1">
+                    <div className="sm:col-span-3 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 w-full sm:w-auto">
                       {act.amount ? (
-                        <p className="text-lg font-black text-on-surface font-mono tracking-tighter tabular-nums leading-none">{act.amount}</p>
+                        <p className="text-base sm:text-lg font-black text-on-surface font-mono tracking-tighter tabular-nums leading-none">{act.amount}</p>
                       ) : (
-                        <div className="px-2.5 py-1 bg-on-surface/5 rounded-lg text-[9px] font-black uppercase tracking-widest text-on-surface-variant opacity-60">SYSTEM_LOG</div>
+                        <div className="px-2.5 py-1 bg-on-surface/5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-on-surface-variant opacity-60">{t('system_log')}</div>
                       )}
-                      <p className="md:hidden text-xs text-on-surface-variant font-medium">{act.sub}</p>
+                      <p className="sm:hidden text-[10px] text-on-surface-variant font-bold uppercase tracking-widest opacity-40">{act.sub}</p>
                     </div>
 
-                    <div className="md:col-span-2 flex flex-col items-end gap-1.5 md:pr-4">
-                      <div className="flex items-center gap-2 text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none">
+                    <div className="sm:col-span-2 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 sm:pr-4 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-outline/20">
+                      <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none">
                         {act.time}
                       </div>
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/20 group-hover:bg-primary transition-colors hidden sm:block"></div>
                     </div>
                   </motion.div>
                 );
@@ -230,7 +234,7 @@ export default function Activities() {
               </div>
               <div>
                 <p className="text-xl font-heading font-black uppercase tracking-[0.1em] text-on-surface opacity-40">{t('query_null')}</p>
-                <p className="text-sm text-on-surface-variant mt-2 opacity-50">No activity logs matching current filter parameters.</p>
+                <p className="text-sm text-on-surface-variant mt-2 opacity-50">{t('no_activity_logs')}</p>
               </div>
             </div>
           )}
@@ -243,7 +247,7 @@ export default function Activities() {
             <div className="space-y-6 relative z-10">
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
-                  <span className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px] opacity-60">Weekly Throughput</span>
+                  <span className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px] opacity-60">{t('weekly_throughput')}</span>
                   <span className="text-primary font-mono font-black text-sm">+42.8%</span>
                 </div>
                 <div className="w-full bg-on-surface/[0.06] h-2 rounded-full overflow-hidden p-[1px]">
@@ -253,7 +257,7 @@ export default function Activities() {
               
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
-                  <span className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px] opacity-60">Latency Success</span>
+                  <span className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px] opacity-60">{t('latency_success')}</span>
                   <span className="text-emerald-500 font-mono font-black text-sm">99.2%</span>
                 </div>
                 <div className="w-full bg-on-surface/[0.06] h-2 rounded-full overflow-hidden p-[1px]">

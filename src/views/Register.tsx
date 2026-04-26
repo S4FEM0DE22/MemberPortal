@@ -131,7 +131,7 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="email">อีเมล</label>
+                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="email">{t('email')}</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
                   <input
@@ -147,7 +147,7 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="password">รหัสผ่าน</label>
+                <label className="text-sm font-semibold text-on-surface-variant" htmlFor="password">{t('password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5 pointer-events-none" />
                   <input

@@ -114,7 +114,7 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -166,7 +166,7 @@ export default function Profile() {
           <div className="flex-1 text-center md:text-left space-y-4">
             <div>
               <h2 className="text-4xl md:text-5xl text-on-surface font-heading font-black tracking-tight mb-2">
-                {formData.fullName || "User Name"}
+                {formData.fullName || t('user_name_default')}
               </h2>
               <p className="text-on-surface-variant font-medium flex items-center justify-center md:justify-start gap-2">
                 <Mail className="w-4 h-4 opacity-40" />
@@ -179,7 +179,7 @@ export default function Profile() {
                 <div className="px-4 py-2 bg-rose-500/10 rounded-xl flex items-center gap-2 border border-rose-500/20 hover:bg-rose-500/20 transition-colors">
                   <BadgeCheck className="w-4 h-4 text-rose-500" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-                    Administrator
+                    {t('administrator')}
                   </span>
                 </div>
               )}
@@ -314,9 +314,9 @@ export default function Profile() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { name: 'Professional Consultation', price: 1500, icon: BadgeCheck, color: 'text-primary', bg: 'bg-primary/10' },
-                { name: 'Premium Resource Pack', price: 500, icon: Info, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                { name: 'Event VIP Ticket', price: 2500, icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                { name: t('pro_consultation'), price: 1500, icon: BadgeCheck, color: 'text-primary', bg: 'bg-primary/10' },
+                { name: t('premium_pack'), price: 500, icon: Info, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { name: t('vip_ticket'), price: 2500, icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-500/10' },
               ].map((item) => (
                 <div key={item.name} className="p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 flex flex-col justify-between group hover:border-primary/30 transition-all">
                   <div>
@@ -358,7 +358,7 @@ export default function Profile() {
                             <CheckCircle2 className="w-5 h-5 text-white" />
                           </div>
                         )}
-                        <h4 className={`text-2xl font-black font-heading tracking-tight mb-1 ${isCurrent ? 'text-white' : 'text-on-surface'}`}>{tier.role}</h4>
+                        <h4 className={`text-2xl font-black font-heading tracking-tight mb-1 ${isCurrent ? 'text-white' : 'text-on-surface'}`}>{t(tier.role.toLowerCase())}</h4>
                         <p className={`text-lg font-bold ${isCurrent ? 'text-white/80' : 'text-primary'}`}>฿{tier.cost.toLocaleString()}</p>
                         
                         <button 
@@ -370,7 +370,7 @@ export default function Profile() {
                               : 'bg-primary text-on-primary hover:bg-primary-container shadow-xl shadow-primary/10'
                           }`}
                         >
-                          {isCurrent ? t('active') : t('upgrade_to').replace('{role}', tier.role)}
+                          {isCurrent ? t('active') : t('upgrade_to').replace('{role}', t(tier.role.toLowerCase()))}
                         </button>
                      </div>
                    );
@@ -445,7 +445,7 @@ export default function Profile() {
             </div>
             
             <button 
-              onClick={() => alert('Feature coming soon...')}
+              onClick={() => alert(t('feature_coming_soon'))}
               className="relative z-10 w-full py-4 bg-white text-primary rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all mt-6"
             >
               {t('manage_plan')}

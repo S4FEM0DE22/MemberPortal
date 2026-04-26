@@ -31,8 +31,9 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
   ];
 
   return (
-    <header className="sticky top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-20 glass shadow-sm transition-all duration-300">
-      <div className="flex items-center gap-6">
+    <header className="sticky top-0 left-0 w-full z-50 glass shadow-sm transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="flex items-center gap-6">
         <button 
           onClick={onToggleMenu}
           className="p-2.5 rounded-xl hover:bg-on-surface/5 transition-colors md:hidden text-on-surface border border-outline/50"
@@ -86,6 +87,7 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
             alt="User profile"
           />
         </Link>
+      </div>
       </div>
     </header>
   );

@@ -55,9 +55,11 @@ export default function Login() {
           transition={{ duration: 0.6 }}
           className="relative z-10 max-w-lg text-on-primary"
         >
-          <div className="mb-8 flex items-center gap-2">
-            <BadgeCheck className="w-12 h-12 fill-white text-primary" />
-            <h1 className="font-heading text-4xl font-extrabold tracking-tight">MemberPortal</h1>
+          <div className="mb-8 flex items-center gap-4">
+            <div className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center p-2.5 border border-white/20">
+              <BadgeCheck className="w-full h-full text-white" />
+            </div>
+            <h1 className="font-heading text-4xl font-black tracking-tighter uppercase text-white">Member<span className="opacity-50">Portal</span></h1>
           </div>
           <h2 className="font-heading text-3xl font-semibold mb-4 text-white">{t('elevate_network')}</h2>
           <p className="text-lg opacity-90 leading-relaxed mb-8">
@@ -86,11 +88,11 @@ export default function Login() {
           className="w-full max-w-[440px]"
         >
           {/* Mobile Branding */}
-          <div className="md:hidden flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-              <BadgeCheck className="w-8 h-8 fill-white text-primary" />
+          <div className="md:hidden flex flex-col items-center mb-10">
+            <div className="w-16 h-16 bg-primary rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-primary/30 border border-primary-container/20">
+              <BadgeCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="font-heading text-3xl font-bold text-primary">MemberPortal</h1>
+            <h1 className="font-heading text-3xl font-black text-on-surface uppercase tracking-tighter">Member<span className="text-primary">Portal</span></h1>
           </div>
 
           <div className="bg-surface-container border border-outline-variant p-8 md:p-10 rounded-2xl shadow-sm">

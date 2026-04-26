@@ -1,15 +1,15 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ArrowUpDown, BadgeCheck } from 'lucide-react';
+import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ArrowUpDown, BadgeCheck, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp, Member } from '../context/AppContext';
+import { ALL_ROLES, TIER_BENEFITS, TIER_COLORS } from '../constants';
 
 type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
 type SortDirection = 'asc' | 'desc' | null;
 
 const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other'];
-const ALL_ROLES = ['Standard', 'Silver', 'Gold', 'Professional', 'Premium', 'Platinum', 'Premium Gold', 'Diamond', 'VIP', 'Founder', 'Elite', 'Legend'];
 
 export default function Members() {
   const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers } = useApp();
@@ -285,38 +285,42 @@ export default function Members() {
         )}
       </AnimatePresence>
 
-      <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-12">
-        <div className="space-y-2">
-          <h1 className="text-5xl text-on-surface font-heading font-black uppercase tracking-tighter leading-none">{t('member_list')}</h1>
-          <p className="text-on-surface-variant text-sm font-medium tracking-tight opacity-60 max-w-md">{t('manage_members')}</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+          <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 sm:gap-8 mb-10 sm:mb-12">
+            <div className="space-y-1 sm:space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-1 w-8 bg-primary rounded-full" />
+                <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{t('administration')}</p>
+              </div>
+              <h1 className="text-4xl md:text-5xl text-on-surface font-heading font-extrabold tracking-tight underline decoration-primary/20 decoration-8 underline-offset-8 lowercase first-letter:uppercase">{t('member_list')}</h1>
+              <p className="text-on-surface-variant font-medium mt-6 max-w-md">{t('manage_members')}</p>
+            </div>
+            <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-2 sm:gap-3">
           <button 
             onClick={generateRandomMembers}
-            className="px-6 py-3 border border-outline rounded-2xl bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
+            className="px-4 py-2.5 sm:px-6 sm:py-3 border border-outline rounded-xl sm:rounded-2xl bg-surface-container text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-2 sm:gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
-            <UserPlus className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             <span>{t('generate_random')}</span>
           </button>
           <button 
             onClick={() => { setIsImporting(true); setIsInviting(false); }}
-            className="px-6 py-3 border border-outline rounded-2xl bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
+            className="px-4 py-2.5 sm:px-6 sm:py-3 border border-outline rounded-xl sm:rounded-2xl bg-surface-container text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-2 sm:gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
-            <Upload className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             {t('import_csv')}
           </button>
           <button 
             onClick={exportMembers}
-            className="px-6 py-3 border border-outline rounded-2xl bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
+            className="px-4 py-2.5 sm:px-6 sm:py-3 border border-outline rounded-xl sm:rounded-2xl bg-surface-container text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-2 sm:gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
-            <FileSpreadsheet className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             <span>{t('export_report')}</span>
           </button>
           <button 
             onClick={() => { setIsInviting(true); setIsImporting(false); }}
-            className="bg-primary hover:bg-primary-container text-on-primary px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-xl shadow-primary/20 active:scale-95"
+            className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-3 transition-all shadow-xl shadow-primary/20 active:scale-95"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {t('invite_member')}
           </button>
         </div>
@@ -333,6 +337,8 @@ export default function Members() {
               key={item.role}
               onClick={() => setRoleFilter(item.isTotal ? 'All' : (item.role === roleFilter ? 'All' : item.role))}
               className={`p-6 rounded-[2rem] border text-left transition-all w-full h-full group ${
+                item.isTotal ? 'col-span-2 sm:col-span-1' : ''
+              } ${
                 isSelected 
                   ? 'bg-primary border-primary shadow-2xl shadow-primary/20' 
                   : 'bg-surface-container border-outline hover:border-primary/40 shadow-sm'
@@ -370,7 +376,7 @@ export default function Members() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-outline-variant/30"
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl border border-outline-variant/30 max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setIsInviting(false)}
@@ -440,7 +446,7 @@ export default function Members() {
                       onChange={e => setInviteForm(prev => ({ ...prev, isAdmin: e.target.checked }))}
                       className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
                     />
-                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">Grant Admin Permissions</span>
+                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">{t('grant_admin')}</span>
                   </label>
                 </div>
                 
@@ -480,7 +486,7 @@ export default function Members() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-surface-container rounded-[2rem] w-full max-w-lg p-10 shadow-2xl border border-outline-variant/30"
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-lg p-6 sm:p-10 shadow-2xl border border-outline-variant/30 max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setSelectedMember(null)}
@@ -505,7 +511,7 @@ export default function Members() {
                 <div className="flex gap-2 mt-4">
                   {selectedMember.isAdmin && (
                     <span className="px-4 py-1 bg-rose-500/10 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-500/20 shadow-sm">
-                      Admin
+                      {t('admin')}
                     </span>
                   )}
                   <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20">
@@ -540,7 +546,19 @@ export default function Members() {
                   </div>
                 </div>
 
-                <div className="w-full mt-6 flex flex-col gap-3">
+                <div className="w-full mt-6 space-y-4">
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40 text-left px-1">Tier Benefits</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {TIER_BENEFITS[selectedMember.role]?.map((benefit, i) => (
+                      <div key={i} className="flex items-center gap-2 p-3 bg-on-surface/5 rounded-xl border border-outline-variant/30">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span className="text-xs font-bold text-on-surface-variant">{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-full mt-8 flex flex-col gap-3">
                   <div className="flex gap-4">
                     {selectedMember.status === 'Pending' && (
                       <button 
@@ -595,7 +613,7 @@ export default function Members() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-8 shadow-2xl border border-outline-variant/30"
+              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl border border-outline-variant/30 max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setIsEditing(false)}
@@ -681,7 +699,7 @@ export default function Members() {
                       onChange={e => setEditForm(prev => prev ? ({ ...prev, isAdmin: e.target.checked }) : null)}
                       className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
                     />
-                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">Grant Admin Permissions</span>
+                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">{t('grant_admin')}</span>
                   </label>
                 </div>
                 
@@ -787,33 +805,33 @@ export default function Members() {
 
       {/* Filters & Search */}
       <div className="space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-4 h-4 sm:w-5 h-5" />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('search_placeholder')} 
-              className="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant bg-surface-container text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
+              className="w-full pl-10 sm:pl-12 pr-10 py-2.5 sm:py-3 rounded-xl border border-outline-variant bg-surface-container text-xs sm:text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5 sm:w-4 h-4" />
               </button>
             )}
           </div>
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-6 py-3 border rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${
+            className={`px-4 sm:px-6 py-2.5 sm:py-3 border rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${
               showFilters ? 'bg-primary text-on-primary border-primary' : 'bg-surface-container text-on-surface border-outline-variant hover:bg-on-surface/5'
             }`}
           >
-            <Filter className="w-5 h-5" />
-            {t('filters')}
+            <Filter className="w-4 h-4 sm:w-5 h-5" />
+            <span>{t('filters')}</span>
             {(statusFilter !== 'All' || roleFilter !== 'All' || categoryFilter !== 'All') && (
               <span className="ml-1 w-2 h-2 bg-on-primary rounded-full" />
             )}
@@ -905,10 +923,10 @@ export default function Members() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-surface-container border border-outline rounded-[3rem] shadow-sm overflow-hidden"
+        className="bg-surface-container border border-outline rounded-[2rem] sm:rounded-[3rem] shadow-sm overflow-hidden"
       >
-        <div className="overflow-x-auto overflow-y-hidden">
-          <table className="w-full text-left border-separate border-spacing-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-separate border-spacing-0 min-w-[1000px] lg:min-w-0">
             <thead>
               <tr className="bg-on-surface/[0.01] border-b border-outline/50">
                 {[
@@ -962,7 +980,7 @@ export default function Members() {
                               <BadgeCheck className="w-4 h-4 text-rose-500 fill-rose-500/10" />
                             )}
                           </div>
-                          <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.1em] opacity-40">{member.email}</p>
+                          <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.1em] opacity-40 truncate max-w-[150px]">{member.email}</p>
                         </div>
                       </div>
                     </td>

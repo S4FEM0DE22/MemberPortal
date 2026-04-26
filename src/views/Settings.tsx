@@ -77,8 +77,8 @@ export default function Settings() {
       </AnimatePresence>
 
       <header>
-        <h1 className="text-4xl text-on-surface font-heading">{t('settings')}</h1>
-        <p className="text-on-surface-variant mt-2">{t('settings_desc')}</p>
+        <h1 className="text-4xl md:text-5xl text-on-surface font-heading font-extrabold tracking-tight underline decoration-primary/20 decoration-8 underline-offset-8 lowercase first-letter:uppercase">{t('settings')}</h1>
+        <p className="text-on-surface-variant font-medium mt-6 max-w-md">{t('settings_desc')}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -87,12 +87,17 @@ export default function Settings() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-container border border-outline-variant rounded-2xl p-8 shadow-sm"
+            className="bg-surface-container border border-outline-variant/30 rounded-[3rem] p-8 md:p-12 shadow-sm"
           >
-            <h3 className="text-xl text-on-surface mb-8 flex items-center gap-3 font-heading">
-              <Sliders className="text-primary w-6 h-6" />
-              {t('appearance')}
-            </h3>
+            <div className="flex items-center gap-4 mb-10">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                <Sliders className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-2xl text-on-surface font-heading font-black uppercase tracking-tight">{t('appearance')}</h3>
+                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60">{t('ui_personalization')}</p>
+              </div>
+            </div>
             
             <div className="space-y-6">
               {/* Dark Mode Toggle */}
@@ -160,12 +165,17 @@ export default function Settings() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-surface-container border border-outline-variant rounded-2xl p-8 shadow-sm"
+            className="bg-surface-container border border-outline-variant/30 rounded-[3rem] p-8 md:p-12 shadow-sm"
           >
-            <h3 className="text-xl text-on-surface mb-8 flex items-center gap-3 font-heading">
-              <Shield className="text-primary w-6 h-6" />
-              {t('security')}
-            </h3>
+            <div className="flex items-center gap-4 mb-10">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-2xl text-on-surface font-heading font-black uppercase tracking-tight">{t('security')}</h3>
+                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60">{t('protection_access')}</p>
+              </div>
+            </div>
             
             {isGoogleUser ? (
               <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-4">

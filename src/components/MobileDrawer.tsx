@@ -51,20 +51,20 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 left-0 z-[70] w-80 bg-surface shadow-2xl lg:hidden flex flex-col transition-colors duration-300"
           >
-            <div className="p-8 border-b border-outline/50 flex items-center justify-between">
-              <span className="text-2xl font-black tracking-tighter text-primary font-heading uppercase">
-                Member<span className="text-on-surface">Portal</span>
-              </span>
-              <button 
-                onClick={onClose}
-                className="p-2.5 hover:bg-on-surface/5 rounded-xl transition-all text-on-surface border border-outline/50"
-              >
-                <X className="w-5 h-5 opacity-60" />
-              </button>
+            <div className="px-6 h-20 border-b border-outline/50 flex items-center justify-between">
+               <span className="text-xl font-black tracking-tighter text-primary font-heading uppercase">
+                 Member<span className="text-on-surface">Portal</span>
+               </span>
+               <button 
+                 onClick={onClose}
+                 className="p-2.5 hover:bg-on-surface/5 rounded-xl transition-all text-on-surface border border-outline/50"
+               >
+                 <X className="w-5 h-5 opacity-60" />
+               </button>
             </div>
 
-            <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.3em] px-4 mb-4 opacity-40">Main Navigation</p>
+            <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.3em] px-4 py-6 opacity-40">Main Navigation</p>
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -86,7 +86,7 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
               })}
             </nav>
 
-            <div className="p-6 space-y-4 border-t border-outline/50 bg-on-surface/[0.01]">
+            <div className="p-2 space-y-1 border-t border-outline/50 bg-on-surface/[0.01]">
               <button
                 onClick={toggleTheme}
                 className="flex items-center justify-between w-full px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-on-surface/5 transition-all group"
