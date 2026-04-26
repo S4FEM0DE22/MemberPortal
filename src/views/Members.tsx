@@ -3,6 +3,7 @@ import { Search, UserPlus, Filter, MoreVertical, Upload, FileSpreadsheet, X, Ale
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { useApp, Member } from '../context/AppContext';
 import { ALL_ROLES, TIER_BENEFITS, TIER_COLORS } from '../constants';
 
@@ -16,7 +17,6 @@ export default function Members() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [isInviting, setIsInviting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [editForm, setEditForm] = useState<Member | null>(null);
@@ -28,14 +28,12 @@ export default function Members() {
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
   const [showFilters, setShowFilters] = useState(false);
-  const [showImportSuccess, setShowImportSuccess] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Standard', category: 'volunteers', isAdmin: false, address: '', phone: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const state = location.state as { filter?: string, openInvite?: boolean };
+    const state = location.state as { filter?: string };
     if (state?.filter) {
       if (state.filter === 'Active' || state.filter === 'Pending' || state.filter === 'Suspended') {
         setStatusFilter(state.filter);
@@ -45,9 +43,6 @@ export default function Members() {
         setSearchQuery(state.filter);
       }
     }
-    if (state?.openInvite) {
-      setIsInviting(true);
-    }
 
     const hasActionableState = state && Object.keys(state).length > 0;
     if (hasActionableState) {
@@ -55,29 +50,13 @@ export default function Members() {
     }
   }, [location, navigate]);
 
-  const handleInviteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newMember: Member = {
-      ...inviteForm,
-      status: 'Pending',
-      joinDate: new Date().toISOString().split('T')[0],
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(inviteForm.name)}&background=random`
-    };
-    await addMember(newMember);
-    setIsInviting(false);
-    setInviteForm({ name: '', email: '', role: 'Standard', category: 'volunteers', isAdmin: false, address: '', phone: '' });
-    setShowImportSuccess(true);
-    setTimeout(() => setShowImportSuccess(false), 3000);
-  };
-
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editForm || !editForm.id) return;
     await updateMember(editForm.id, editForm);
     setIsEditing(false);
     setSelectedMember(editForm);
-    setShowImportSuccess(true);
-    setTimeout(() => setShowImportSuccess(false), 3000);
+    toast.success(t('profile_updated') || 'อัปเดตโปรไฟล์แล้ว');
   };
 
   const handleSuspend = async (member: Member) => {
@@ -222,33 +201,43 @@ export default function Members() {
   const roles = useMemo(() => rolesSummary.map(r => r.isTotal ? 'All' : r.role), [rolesSummary]);
 
   const generateRandomMembers = async () => {
-    const firstNames = ['Somchai', 'Somsak', 'Wichai', 'Anong', 'Kanya', 'John', 'Jane', 'Michael', 'Sarah', 'Preecha'];
-    const lastNames = ['Sae-Lee', 'Smith', 'Doe', 'Vichit', 'Rakthai', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'];
-    const possibleRoles = ALL_ROLES;
-    const categories = ['volunteers', 'committee_members', 'event_attendees', 'other', 'donors', 'general'];
+    const firstNames = ['Somchai', 'Somsak', 'Wichai', 'Anong', 'Kanya', 'Arthit', 'Boondee', 'Chaiya', 'Duangchai', 'Ekkachai', 'Fah', 'Gunn', 'Hansa', 'Itthipol', 'Jirayu'];
+    const lastNames = ['Sae-Lee', 'Rakthai', 'Vichit', 'Suksombut', 'Thongdee', 'Jaidee', 'Wattana', 'Pongsak', 'Manee', 'Sarttra', 'Boonmee', 'Srisuwan'];
+    const possibleRoles = ALL_ROLES.filter(r => r !== 'Admin');
+    const categories = ['volunteers', 'committee_members', 'event_attendees', 'donors', 'general'];
 
     const newRandomMembers: Member[] = Array.from({ length: 10 }).map(() => {
       const fn = firstNames[Math.floor(Math.random() * firstNames.length)];
       const ln = lastNames[Math.floor(Math.random() * lastNames.length)];
       const name = `${fn} ${ln}`;
+      const spending = Math.floor(Math.random() * 200000);
+      
+      // Determine role based on spending to keep it consistent with auto-upgrade logic
+      let role = 'Standard';
+      if (spending >= 150000) role = 'Legend';
+      else if (spending >= 75000) role = 'Founder';
+      else if (spending >= 35000) role = 'Diamond';
+      else if (spending >= 15000) role = 'Platinum';
+      else if (spending >= 5000) role = 'Gold';
+      else if (spending >= 1000) role = 'Silver';
+
       return {
         name,
-        email: `${fn.toLowerCase()}.${ln.toLowerCase()}${Math.floor(Math.random() * 1000)}@example.com`,
-        role: possibleRoles[Math.floor(Math.random() * possibleRoles.length)],
+        email: `${fn.toLowerCase()}.${ln.toLowerCase()}${Math.floor(Math.random() * 9999)}@example.com`,
+        role,
+        spending,
         category: categories[Math.floor(Math.random() * categories.length)],
-        status: Math.random() > 0.2 ? 'Active' : 'Pending',
-        joinDate: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString().split('T')[0],
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+        status: Math.random() > 0.1 ? 'Active' : 'Pending',
+        joinDate: new Date(Date.now() - Math.floor(Math.random() * 31536000000)).toISOString().split('T')[0], // Within last year
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&bold=true`
       };
     });
 
     try {
       await bulkAddMembers(newRandomMembers);
-      setShowImportSuccess(true);
-      setTimeout(() => setShowImportSuccess(false), 3000);
+      toast.success(t('import_success') || 'เพิ่มสมาชิกสำเร็จ');
     } catch (e: any) {
-      setImportError(`Failed to add random members: ${e.message}`);
-      setIsImporting(true); // Show the import modal to display the error
+      toast.error(`Failed to add random members: ${e.message}`);
     }
   };
 
@@ -280,8 +269,7 @@ export default function Members() {
 
         await bulkAddMembers(newMembers);
         setIsImporting(false);
-        setShowImportSuccess(true);
-        setTimeout(() => setShowImportSuccess(false), 3000);
+        toast.success(t('import_success') || 'นำเข้าสำเร็จ');
       },
       error: (error) => {
         setImportError(`${t('error_csv_read')}: ${error.message}`);
@@ -370,21 +358,7 @@ export default function Members() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showImportSuccess && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            {t('import_success')}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-          <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 sm:gap-8 mb-10 sm:mb-12">
+      <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 sm:gap-8 mb-10 sm:mb-12">
             <div className="space-y-1 sm:space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-1 w-8 bg-primary rounded-full" />
@@ -402,7 +376,7 @@ export default function Members() {
             <span>{t('generate_random')}</span>
           </button>
           <button 
-            onClick={() => { setIsImporting(true); setIsInviting(false); }}
+            onClick={() => setIsImporting(true)}
             className="px-4 py-2.5 sm:px-6 sm:py-3 border border-outline rounded-xl sm:rounded-2xl bg-surface-container text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-2 sm:gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
           >
             <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
@@ -410,17 +384,10 @@ export default function Members() {
           </button>
           <button 
             onClick={exportMembers}
-            className="px-4 py-2.5 sm:px-6 sm:py-3 border border-outline rounded-xl sm:rounded-2xl bg-surface-container text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-2 sm:gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group"
+            className="px-4 py-2.5 sm:px-6 sm:py-3 border border-outline rounded-xl sm:rounded-2xl bg-surface-container text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-on-surface flex items-center justify-center gap-2 sm:gap-3 hover:bg-on-surface/5 transition-all shadow-sm active:scale-95 group col-span-2 grow sm:grow-0"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
             <span>{t('export_report')}</span>
-          </button>
-          <button 
-            onClick={() => { setIsInviting(true); setIsImporting(false); }}
-            className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 sm:gap-3 transition-all shadow-xl shadow-primary/20 active:scale-95"
-          >
-            <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            {t('invite_member')}
           </button>
         </div>
       </header>
@@ -459,129 +426,6 @@ export default function Members() {
           );
         })}
       </div>
-
-      {/* Invite Modal */}
-      <AnimatePresence>
-        {isInviting && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsInviting(false)}
-              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
-            ></motion.div>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-surface-container rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl border border-outline-variant/30 max-h-[90vh] overflow-y-auto"
-            >
-              <button 
-                onClick={() => setIsInviting(false)}
-                className="absolute right-6 top-6 p-2 hover:bg-on-surface/5 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-outline" />
-              </button>
-
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserPlus className="w-8 h-8" />
-                </div>
-                <h2 className="text-2xl text-on-surface font-heading">{t('invite_new')}</h2>
-                <p className="text-on-surface-variant mt-2">{t('invite_desc')}</p>
-              </div>
-
-              <form onSubmit={handleInviteSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('full_name')}</label>
-                  <input 
-                    required
-                    value={inviteForm.name}
-                    onChange={e => setInviteForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
-                    placeholder={t('name_placeholder')}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('email')}</label>
-                  <input 
-                    required
-                    type="email"
-                    value={inviteForm.email}
-                    onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
-                    placeholder="member@example.com"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('member_tier')}</label>
-                  <select 
-                    value={inviteForm.role}
-                    onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
-                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
-                  >
-                    {ALL_ROLES.map(role => (
-                      <option key={role} value={role}>{t(role.toLowerCase()) || role}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('category')}</label>
-                  <select 
-                    value={inviteForm.category}
-                    onChange={e => setInviteForm(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
-                  >
-                    {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{t(cat) || cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('address')}</label>
-                  <input 
-                    value={inviteForm.address}
-                    onChange={e => setInviteForm(prev => ({ ...prev, address: e.target.value }))}
-                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all" 
-                    placeholder="123 Sukhumvit, Bangkok"
-                  />
-                </div>
-
-                <div className="space-y-1.5 pt-2">
-                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-on-surface/5 rounded-xl border border-outline-variant hover:border-primary/50 transition-all">
-                    <input 
-                      type="checkbox"
-                      checked={inviteForm.isAdmin}
-                      onChange={e => setInviteForm(prev => ({ ...prev, isAdmin: e.target.checked }))}
-                      className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm font-bold text-on-surface uppercase tracking-widest">{t('grant_admin')}</span>
-                  </label>
-                </div>
-                
-                <div className="pt-4 flex gap-4">
-                  <button 
-                    type="button"
-                    onClick={() => setIsInviting(false)}
-                    className="flex-1 py-3 bg-on-surface/5 text-on-surface font-bold rounded-xl hover:bg-on-surface/10 transition-colors active:scale-95"
-                  >
-                    {t('cancel')}
-                  </button>
-                  <button 
-                    type="submit"
-                    className="flex-1 py-3 bg-primary text-on-primary font-bold rounded-xl hover:bg-primary-container transition-colors active:scale-95 shadow-lg shadow-primary/20"
-                  >
-                    {t('send_invite')}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Detail Modal */}
       <AnimatePresence>

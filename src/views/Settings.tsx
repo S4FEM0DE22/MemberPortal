@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
 export default function Settings() {
-  const { theme, toggleTheme, language, setLanguage, t, user, logout } = useApp();
+  const { theme, toggleTheme, language, setLanguage, t, user, logout, currentMember } = useApp();
   const [pushNotif, setPushNotif] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);

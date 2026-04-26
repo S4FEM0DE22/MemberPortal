@@ -301,19 +301,10 @@ export default function Dashboard() {
                             'bg-slate-500': '#64748b',
                             'bg-zinc-400': '#a1a1aa',
                             'bg-amber-500': '#f59e0b',
-                            'bg-emerald-500': '#10b981',
-                            'bg-indigo-500': '#6366f1',
                             'bg-cyan-500': '#06b6d4',
-                            'bg-amber-400': '#fbbf24',
                             'bg-blue-600': '#2563eb',
-                            'bg-purple-600': '#9333ea',
                             'bg-rose-500': '#f43f5e',
-                            'bg-orange-500': '#f97316',
-                            'bg-red-600': '#dc2626',
-                            'bg-primary': '#3b82f6',
-                            'bg-slate-400': '#94a3b8',
-                            'bg-purple-500': '#a855f7',
-                            'bg-blue-500': '#3b82f6'
+                            'bg-red-600': '#dc2626'
                           };
                           return <Cell key={`cell-${index}`} fill={colorMap[colorClass] || '#3b82f6'} />;
                         })}
