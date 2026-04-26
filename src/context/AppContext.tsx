@@ -146,10 +146,10 @@ interface AppContextType {
 }
 
 const INITIAL_MEMBERS: Member[] = [
-  { name: 'Sarah Jenkins', role: 'Premium Gold', status: 'Active', email: 'sarah.j@example.com', joinDate: '2022-10-12', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop', category: 'Committee Members' },
-  { name: 'David Miller', role: 'Professional', status: 'Pending', email: 'd.miller@company.com', joinDate: '2023-01-05', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop', category: 'Volunteers' },
-  { name: 'Emily Watson', role: 'Platinum', status: 'Active', email: 'emily.w@membership.io', joinDate: '2021-09-20', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', category: 'Event Attendees' },
-  { name: 'Alex Thompson', role: 'Platinum', status: 'Active', email: 'alex.t@member.net', joinDate: '2021-10-14', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9oFhmFaa1uZBlTYMdM_doiRJ-D_1BT1K8HBEtU1uP3Rsffzr2uJ3_XzEBQfuCDX8aem149cLYHiUgcfVtFm9LfULHbm7qnZUjBdpo_bWxIhEZuuEjsBJllfYoWLtG-n-N7NpFZlDo9l-K16wrFggc6ip4xZ0C9Qpa76Gntr9Wb7d_nuB_RwoPfJFy3qniXF9_XXB-7oz6uu7VzZTesvjtdpzkTDdO66mOOZwrT_gvr8PPcowHjH2nQILam5V77pO20QZexzsUtxag', category: 'Committee Members' },
+  { name: 'Sarah Jenkins', role: 'Gold', status: 'Active', email: 'sarah.j@example.com', joinDate: '2022-10-12', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop', category: 'committee_members' },
+  { name: 'David Miller', role: 'Standard', status: 'Pending', email: 'd.miller@company.com', joinDate: '2023-01-05', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop', category: 'volunteers' },
+  { name: 'Emily Watson', role: 'Platinum', status: 'Active', email: 'emily.w@membership.io', joinDate: '2021-09-20', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', category: 'event_attendees' },
+  { name: 'Alex Thompson', role: 'Platinum', status: 'Active', email: 'alex.t@member.net', joinDate: '2021-10-14', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9oFhmFaa1uZBlTYMdM_doiRJ-D_1BT1K8HBEtU1uP3Rsffzr2uJ3_XzEBQfuCDX8aem149cLYHiUgcfVtFm9LfULHbm7qnZUjBdpo_bWxIhEZuuEjsBJllfYoWLtG-n-N7NpFZlDo9l-K16wrFggc6ip4xZ0C9Qpa76Gntr9Wb7d_nuB_RwoPfJFy3qniXF9_XXB-7oz6uu7VzZTesvjtdpzkTDdO66mOOZwrT_gvr8PPcowHjH2nQILam5V77pO20QZexzsUtxag', category: 'committee_members' },
 ];
 
 const translations = {
@@ -168,6 +168,15 @@ const translations = {
     export_report: 'ส่งออกรายงาน',
     download_csv: 'ดาวน์โหลด CSV',
     bulk_status_update: 'อัปเดตสถานะแบบกลุ่ม',
+    shop: 'ร้านค้า',
+    marketplace: 'ตลาดสินค้าและระดับ',
+    products: 'สินค้า',
+    upgrades: 'อัปเกรดระดับ',
+    loyalty_program: 'ระบบสมาชิกสัมพันธ์',
+    buy_now: 'ซื้อเลย',
+    insufficient_funds: 'ยอดเงินไม่เพียงพอในบัญชีของคุณ',
+    purchase_success: 'การสั่งซื้อของคุณเสร็จสมบูรณ์แล้ว',
+    upgrade_success: 'บัญชีของคุณได้รับการอัปเกรดเรียบร้อยแล้ว',
     home: 'หน้าแรก',
     members: 'สมาชิก',
     profile: 'โปรไฟล์',
@@ -197,19 +206,13 @@ const translations = {
     manage_plan: 'จัดการแผนการเป็นสมาชิก',
     renewal_payment: 'ชำระเงินต่ออายุ',
     annual_gold: 'สมาชิกทองรายปี',
-    approved_request: 'คำขอใหม่ได้รับการอนุมัติ',
-    professional_tier: 'ระดับมืออาชีพ',
-    certified: 'ผ่านการรับรอง',
-    profile_updated: 'อัปเดตโปรไฟล์แล้ว',
-    cert_updated: 'อัปเดตใบรับรองแล้ว',
-    hours_ago: 'ชม. ที่แล้ว',
-    yesterday: 'เมื่อวานนี้',
     gold_tier: 'ระดับทอง',
     platinum_tier: 'ระดับแพลทินัม',
     silver_tier: 'ระดับเงิน',
     diamond_tier: 'ระดับไดมอนด์',
     founder_tier: 'ระดับผู้ก่อตั้ง',
-    standard_tier: 'มาตรฐาน',
+    legend_tier: 'ระดับตำนาน',
+    standard_tier: 'ระดับมาตรฐาน',
     online_members: 'สมาชิกที่ออนไลน์',
     member_list: 'รายชื่อสมาชิก',
     manage_members: 'จัดการและตรวจสอบสมาชิกทั้งหมดในระบบ',
@@ -333,12 +336,9 @@ const translations = {
     active_members: 'สมาชิกที่ใช้งานอยู่',
     daily_activities: 'กิจกรรมรายวัน',
     spending: 'ยอดการใช้จ่าย',
-    shop: 'ร้านค้า',
     buy_item: 'ซื้อสินค้า',
     upgrade: 'อัปเกรดระดับ',
     upgrade_to: 'อัปเกรดเป็น {role}',
-    purchase_success: 'ซื้อสินค้าสำเร็จ!',
-    upgrade_success: 'อัปเกรดระดับสำเร็จ!',
     auto_upgrade_hint: 'ใช้จ่ายครบ {amount} เพื่ออัปเกรดเป็น {role}',
     total_spent: 'ยอดรวมการใช้จ่าย',
     shop_desc: 'สะสมยอดจากการซื้อสินค้าเพื่อเพิ่มระดับสมาชิก หรืออัปเกรดระดับได้ทันที',
@@ -355,7 +355,6 @@ const translations = {
     committee_members: 'คณะกรรมการ',
     event_attendees: 'ผู้เข้าร่วมกิจกรรม',
     other: 'อื่นๆ',
-    staff: 'พนักงาน',
     donors: 'ผู้บริจาค',
     general: 'ทั่วไป',
     are_you_sure: 'คุณแน่ใจหรือไม่?',
@@ -407,11 +406,16 @@ const translations = {
     user_name_default: 'ชื่อผู้ใช้',
     ui_personalization: 'หน้าตาโปรแกรมและการตั้งค่าส่วนตัว',
     protection_access: 'การป้องกันและการเข้าถึง',
-    silver: 'ซิลเวอร์',
-    gold: 'โกลด์',
-    platinum: 'แพลทินัม',
-    diamond: 'ไดมอนด์',
-    founder: 'ผู้ก่อตั้ง',
+    silver: 'สมาชิกระดับเงิน (Silver)',
+    gold: 'สมาชิกระดับทอง (Gold)',
+    platinum: 'สมาชิกระดับพลาตินัม (Platinum)',
+    diamond: 'สมาชิกระดับไดมอนด์ (Diamond)',
+    founder: 'สมาชิกกิตติมศักดิ์ (Founder)',
+    legend: 'สมาชิกระดับตำนาน (Legend)',
+    standard: 'สมาชิกทั่วไป (Standard)',
+    staff: 'เจ้าหน้าที่ทีมงาน',
+    admin: 'ผู้ดูแลระบบสูงสุด',
+    price: 'ราคา',
     member_since_date: '14 ตุลาคม 2021',
   },
   en: {
@@ -429,6 +433,15 @@ const translations = {
     export_report: 'Export Report',
     download_csv: 'Download CSV',
     bulk_status_update: 'Bulk Status Update',
+    shop: 'Shop',
+    marketplace: 'Marketplace',
+    products: 'Products',
+    upgrades: 'Upgrades',
+    loyalty_program: 'Loyalty Program',
+    buy_now: 'Buy Now',
+    insufficient_funds: 'Insufficient funds in your account',
+    purchase_success: 'Your purchase has been completed successfully',
+    upgrade_success: 'Your account has been upgraded successfully',
     home: 'Home',
     members: 'Members',
     profile: 'Profile',
@@ -459,17 +472,12 @@ const translations = {
     renewal_payment: 'Renewal Payment',
     annual_gold: 'Annual Gold Member',
     approved_request: 'New request approved',
-    professional_tier: 'Professional Tier',
-    certified: 'Certified',
-    profile_updated: 'Profile updated',
-    cert_updated: 'Certificate updated',
-    hours_ago: 'hrs. ago',
-    yesterday: 'Yesterday',
     gold_tier: 'Gold Tier',
     platinum_tier: 'Platinum Tier',
     silver_tier: 'Silver Tier',
     diamond_tier: 'Diamond Tier',
     founder_tier: 'Founder Tier',
+    legend_tier: 'Legend Tier',
     standard_tier: 'Standard Tier',
     online_members: 'Online Members',
     member_list: 'Member List',
@@ -594,12 +602,9 @@ const translations = {
     active_members: 'Active Members',
     daily_activities: 'Daily Activities',
     spending: 'Spending',
-    shop: 'Shop',
     buy_item: 'Buy Item',
     upgrade: 'Upgrade Tier',
     upgrade_to: 'Upgrade to {role}',
-    purchase_success: 'Purchase Successful!',
-    upgrade_success: 'Tier Upgraded Successfully!',
     auto_upgrade_hint: 'Spend {amount} more to upgrade to {role}',
     total_spent: 'Total Spent',
     shop_desc: 'Accumulate spending from purchases to increase your tier, or upgrade directly.',
@@ -616,7 +621,6 @@ const translations = {
     committee_members: 'Committee Members',
     event_attendees: 'Event Attendees',
     other: 'Other',
-    staff: 'Staff',
     donors: 'Donors',
     general: 'General',
     are_you_sure: 'Are you sure?',
@@ -673,11 +677,18 @@ const translations = {
     platinum: 'Platinum',
     diamond: 'Diamond',
     founder: 'Founder',
+    legend: 'Legend',
+    standard: 'Standard',
+    staff: 'Staff',
+    admin: 'Admin',
+    price: 'Price',
     member_since_date: 'October 14, 2021',
   }
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+import { toast } from 'react-hot-toast';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
@@ -1121,10 +1132,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         let newRole = memberData.role;
         
-        // Auto-upgrade logic based on spending (Don't change isAdmin here)
-        if (newSpending >= 50000) newRole = 'Founder';
-        else if (newSpending >= 20000) newRole = 'Diamond';
-        else if (newSpending >= 10000) newRole = 'Platinum';
+        // Auto-upgrade logic based on spending
+        if (newSpending >= 150000) newRole = 'Legend';
+        else if (newSpending >= 75000) newRole = 'Founder';
+        else if (newSpending >= 35000) newRole = 'Diamond';
+        else if (newSpending >= 15000) newRole = 'Platinum';
         else if (newSpending >= 5000) newRole = 'Gold';
         else if (newSpending >= 1000) newRole = 'Silver';
 
@@ -1132,9 +1144,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await updateDoc(doc(db, 'members', memberDoc.id), {
           spending: newSpending,
           role: newRole,
-          // Re-affirm admin status if it's the owner email
           isAdmin: memberData.isAdmin || user.email === 'noppanun47@gmail.com'
         });
+
+        toast.success(t('purchase_success') || 'ซื้อสินค้าสำเร็จ');
 
         await logActivity({
           title: t('payment'),
@@ -1180,6 +1193,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Force admin back if they were an admin
           isAdmin: memberData.isAdmin || user.email === 'noppanun47@gmail.com'
         });
+
+        toast.success(t('upgrade_success') || 'อัปเกรดระดับสำเร็จ');
 
         await logActivity({
           title: t('upgrade'),

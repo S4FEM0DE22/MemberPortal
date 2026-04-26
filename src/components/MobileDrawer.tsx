@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { X, LayoutDashboard, Users, User, Settings as SettingsIcon, LogOut, Moon, Sun } from 'lucide-react';
+import { X, LayoutDashboard, Users, User, Settings as SettingsIcon, LogOut, Moon, Sun, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 
@@ -27,6 +27,7 @@ export default function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
       { name: t('members'), path: '/members', icon: Users },
     ] : []),
     { name: t('activities'), path: '/activities', icon: Users },
+    { name: t('shop'), path: '/shop', icon: ShoppingBag },
     { name: t('profile'), path: '/profile', icon: User },
     { name: t('settings'), path: '/settings', icon: SettingsIcon },
   ];

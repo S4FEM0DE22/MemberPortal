@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { updateProfile } from 'firebase/auth';
 
+import { toast } from 'react-hot-toast';
+
 export default function Profile() {
-  const { t, user, updateProfileData, currentMember, purchaseItem, upgradeTier } = useApp();
+  const { t, user, updateProfileData, currentMember } = useApp();
   
   const [formData, setFormData] = useState({
     fullName: user?.displayName || "",
@@ -14,20 +16,6 @@ export default function Profile() {
     address: currentMember?.address || "",
     email: user?.email || ""
   });
-
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handlePurchase = async (amount: number) => {
-    setIsProcessing(true);
-    await purchaseItem(amount);
-    setIsProcessing(false);
-  };
-
-  const handleUpgrade = async (role: string, cost: number) => {
-    setIsProcessing(true);
-    await upgradeTier(role, cost);
-    setIsProcessing(false);
-  };
 
   useEffect(() => {
     if (user) {
@@ -186,7 +174,7 @@ export default function Profile() {
               <div className="px-4 py-2 bg-on-surface/[0.05] rounded-xl flex items-center gap-2 border border-outline-variant/20 hover:bg-on-surface/[0.08] transition-colors">
                  <div className="w-2 h-2 rounded-full bg-primary" />
                  <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                   {currentMember?.role || t('platinum_tier')}
+                   {t((currentMember?.role || 'Standard').toLowerCase()) || currentMember?.role || t('standard_tier')}
                  </span>
               </div>
               <div className="px-4 py-2 bg-primary/10 rounded-xl flex items-center gap-2 border border-primary/20 hover:bg-primary/20 transition-colors">
@@ -293,91 +281,6 @@ export default function Profile() {
               </div>
             </form>
           </div>
-
-          {/* Shop Section */}
-          <div className="bg-surface-container p-8 md:p-12 rounded-[3.5rem] border border-outline-variant/30 shadow-sm space-y-10">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
-                  <CreditCard className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-2xl text-on-surface font-heading font-black uppercase tracking-tight">{t('shop')}</h2>
-                  <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-widest opacity-60">{t('shop_desc')}</p>
-                </div>
-              </div>
-              <div className="hidden sm:block text-right">
-                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 mb-1">{t('total_spent')}</p>
-                <p className="text-xl font-black text-primary font-heading tracking-tight">฿{(currentMember?.spending || 0).toLocaleString()}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { name: t('pro_consultation'), price: 1500, icon: BadgeCheck, color: 'text-primary', bg: 'bg-primary/10' },
-                { name: t('premium_pack'), price: 500, icon: Info, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                { name: t('vip_ticket'), price: 2500, icon: Calendar, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-              ].map((item) => (
-                <div key={item.name} className="p-6 bg-on-surface/[0.03] rounded-[2.5rem] border border-outline-variant/10 flex flex-col justify-between group hover:border-primary/30 transition-all">
-                  <div>
-                    <div className={`w-12 h-12 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform`}>
-                      <item.icon className="w-6 h-6" />
-                    </div>
-                    <h4 className="font-black text-on-surface text-sm leading-tight mb-1">{item.name}</h4>
-                    <p className="text-lg font-black text-primary font-heading tracking-tight">฿{item.price.toLocaleString()}</p>
-                  </div>
-                  <button 
-                    onClick={() => handlePurchase(item.price)}
-                    disabled={isProcessing}
-                    className="mt-6 w-full py-3 bg-surface border border-outline-variant/40 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isProcessing ? t('processing') : t('buy_item')}
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-10 border-t border-outline-variant/10">
-               <h3 className="text-xl font-heading font-black uppercase tracking-tight mb-8 text-on-surface flex items-center gap-2">
-                 <ShieldCheck className="w-6 h-6 text-primary" />
-                 {t('upgrade')}
-               </h3>
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {[
-                   { role: 'Silver', cost: 1000, color: 'text-slate-400', bg: 'bg-slate-400/10' },
-                   { role: 'Gold', cost: 5000, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                   { role: 'Platinum', cost: 10000, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
-                   { role: 'Diamond', cost: 20000, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
-                   { role: 'Founder', cost: 50000, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                 ].map((tier) => {
-                   const isCurrent = currentMember?.role === tier.role;
-                   return (
-                     <div key={tier.role} className={`p-8 rounded-[3rem] border transition-all relative overflow-hidden group ${isCurrent ? 'bg-primary border-primary shadow-2xl shadow-primary/30' : 'bg-on-surface/[0.03] border-outline-variant/10 hover:border-primary/20'}`}>
-                        {isCurrent && (
-                          <div className="absolute top-4 right-4 bg-white/20 p-1.5 rounded-full scale-110">
-                            <CheckCircle2 className="w-5 h-5 text-white" />
-                          </div>
-                        )}
-                        <h4 className={`text-2xl font-black font-heading tracking-tight mb-1 ${isCurrent ? 'text-white' : 'text-on-surface'}`}>{t(tier.role.toLowerCase())}</h4>
-                        <p className={`text-lg font-bold ${isCurrent ? 'text-white/80' : 'text-primary'}`}>฿{tier.cost.toLocaleString()}</p>
-                        
-                        <button 
-                          onClick={() => handleUpgrade(tier.role, tier.cost)}
-                          disabled={isProcessing || isCurrent}
-                          className={`mt-8 w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 ${
-                            isCurrent 
-                              ? 'bg-white/20 text-white cursor-default' 
-                              : 'bg-primary text-on-primary hover:bg-primary-container shadow-xl shadow-primary/10'
-                          }`}
-                        >
-                          {isCurrent ? t('active') : t('upgrade_to').replace('{role}', t(tier.role.toLowerCase()))}
-                        </button>
-                     </div>
-                   );
-                 })}
-               </div>
-            </div>
-          </div>
         </motion.div>
 
         {/* Sidebar Info Cards */}
@@ -445,7 +348,7 @@ export default function Profile() {
             </div>
             
             <button 
-              onClick={() => alert(t('feature_coming_soon'))}
+              onClick={() => toast.error(t('feature_coming_soon'))}
               className="relative z-10 w-full py-4 bg-white text-primary rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all mt-6"
             >
               {t('manage_plan')}

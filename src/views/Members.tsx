@@ -9,7 +9,7 @@ import { ALL_ROLES, TIER_BENEFITS, TIER_COLORS } from '../constants';
 type SortKey = 'name' | 'role' | 'status' | 'joinDate' | 'category';
 type SortDirection = 'asc' | 'desc' | null;
 
-const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other'];
+const CATEGORIES = ['volunteers', 'committee_members', 'event_attendees', 'other', 'donors', 'general'];
 
 export default function Members() {
   const { t, members, addMember, updateMember, deleteMember, bulkAddMembers, exportMembers, bulkDeleteMembers, bulkUpdateMemberStatus } = useApp();
@@ -29,7 +29,7 @@ export default function Members() {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
   const [showFilters, setShowFilters] = useState(false);
   const [showImportSuccess, setShowImportSuccess] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Standard', category: 'Volunteers', isAdmin: false, address: '', phone: '' });
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Standard', category: 'volunteers', isAdmin: false, address: '', phone: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ export default function Members() {
     };
     await addMember(newMember);
     setIsInviting(false);
-    setInviteForm({ name: '', email: '', role: 'Standard', category: 'Volunteers', isAdmin: false, address: '', phone: '' });
+    setInviteForm({ name: '', email: '', role: 'Standard', category: 'volunteers', isAdmin: false, address: '', phone: '' });
     setShowImportSuccess(true);
     setTimeout(() => setShowImportSuccess(false), 3000);
   };
@@ -225,7 +225,7 @@ export default function Members() {
     const firstNames = ['Somchai', 'Somsak', 'Wichai', 'Anong', 'Kanya', 'John', 'Jane', 'Michael', 'Sarah', 'Preecha'];
     const lastNames = ['Sae-Lee', 'Smith', 'Doe', 'Vichit', 'Rakthai', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'];
     const possibleRoles = ALL_ROLES;
-    const categories = ['Volunteers', 'Staff', 'Donors', 'General'];
+    const categories = ['volunteers', 'committee_members', 'event_attendees', 'other', 'donors', 'general'];
 
     const newRandomMembers: Member[] = Array.from({ length: 10 }).map(() => {
       const fn = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -447,7 +447,7 @@ export default function Members() {
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${
                   isSelected ? 'text-on-primary/70' : 'text-on-surface-variant opacity-40 group-hover:opacity-100 transition-opacity'
                 }`}>
-                  {item.isTotal ? t('total_members') : item.role}
+                  {item.isTotal ? t('total_members') : (t(item.role.toLowerCase()) || item.role)}
                 </p>
                 <p className={`text-3xl font-black font-mono tracking-tighter tabular-nums ${
                   isSelected ? 'text-on-primary' : 'text-on-surface'
@@ -522,7 +522,20 @@ export default function Members() {
                     className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
                   >
                     {ALL_ROLES.map(role => (
-                      <option key={role} value={role}>{role}</option>
+                      <option key={role} value={role}>{t(role.toLowerCase()) || role}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block ml-1 uppercase tracking-widest">{t('category')}</label>
+                  <select 
+                    value={inviteForm.category}
+                    onChange={e => setInviteForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all appearance-none"
+                  >
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{t(cat) || cat}</option>
                     ))}
                   </select>
                 </div>
@@ -614,7 +627,7 @@ export default function Members() {
                     </span>
                   )}
                   <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20">
-                    {selectedMember.role}
+                    {t(selectedMember.role.toLowerCase()) || selectedMember.role}
                   </span>
                   <span className="px-4 py-1 bg-on-surface/5 text-on-surface rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30">
                     {t(selectedMember.category)}
@@ -772,7 +785,7 @@ export default function Members() {
                       className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all"
                     >
                       {ALL_ROLES.map(role => (
-                        <option key={role} value={role}>{role}</option>
+                        <option key={role} value={role}>{t(role.toLowerCase()) || role}</option>
                       ))}
                     </select>
                   </div>
@@ -784,7 +797,7 @@ export default function Members() {
                       className="w-full h-12 px-4 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-surface text-on-surface outline-none transition-all"
                     >
                       {CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>{t(cat) || cat}</option>
                       ))}
                     </select>
                   </div>

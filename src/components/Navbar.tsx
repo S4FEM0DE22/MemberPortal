@@ -26,6 +26,7 @@ export default function Navbar({ onToggleMenu }: NavbarProps) {
       { name: t('members'), path: '/members' },
     ] : []),
     { name: t('activities'), path: '/activities' },
+    { name: t('shop'), path: '/shop' },
     { name: t('profile'), path: '/profile' },
     { name: t('settings'), path: '/settings' },
   ];

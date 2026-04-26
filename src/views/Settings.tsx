@@ -3,6 +3,7 @@ import { Sliders, Shield, AlertTriangle, Info, Calendar, CheckCircle2 } from 'lu
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 export default function Settings() {
   const { theme, toggleTheme, language, setLanguage, t, user, logout } = useApp();
@@ -53,9 +54,9 @@ export default function Settings() {
       }
     } catch (error: any) {
       if (error.code === 'auth/requires-recent-login') {
-        alert(t('error_recent_login'));
+        toast.error(t('error_recent_login'));
       } else {
-        alert(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -272,7 +273,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t('member_tier')}</p>
-                  <p className="text-sm font-bold text-on-surface">{t('platinum_tier')}</p>
+                  <p className="text-sm font-bold text-on-surface">{t((currentMember?.role || 'Standard').toLowerCase()) || currentMember?.role || t('standard_tier')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">

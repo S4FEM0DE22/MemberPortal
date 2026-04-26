@@ -72,9 +72,10 @@ export default function Dashboard() {
   const nextTiers = [
     { role: 'Silver', min: 1000 },
     { role: 'Gold', min: 5000 },
-    { role: 'Platinum', min: 10000 },
-    { role: 'Diamond', min: 20000 },
-    { role: 'Founder', min: 50000 },
+    { role: 'Platinum', min: 15000 },
+    { role: 'Diamond', min: 35000 },
+    { role: 'Founder', min: 75000 },
+    { role: 'Legend', min: 150000 },
   ];
   
   const currentSpending = currentMember?.spending || 0;
@@ -103,7 +104,7 @@ export default function Dashboard() {
               )}
               <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-primary/10 rounded-full border border-primary/20 backdrop-blur-sm">
                 <BadgeCheck className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{t('tier_account').replace('{tier}', currentMember?.role || 'Standard')}</span>
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{t('tier_account').replace('{tier}', t((currentMember?.role || 'Standard').toLowerCase()) || (currentMember?.role || 'Standard'))}</span>
               </div>
             </div>
           </motion.div>
@@ -126,7 +127,7 @@ export default function Dashboard() {
             {nextTier && (
               <div className="space-y-4 pt-4 border-t border-outline-variant/30">
                 <div className="flex justify-between items-end">
-                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest leading-none">{t('next')}: {nextTier.role}</p>
+                  <p className="text-[10px] font-black text-on-surface uppercase tracking-widest leading-none">{t('next')}: {t(nextTier.role.toLowerCase()) || nextTier.role}</p>
                   <p className="text-base font-black text-primary font-mono leading-none">{Math.round(progress)}%</p>
                 </div>
                 <div className="h-3 bg-on-surface/5 rounded-full overflow-hidden p-0.5 border border-outline-variant/50">
@@ -137,7 +138,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <p className="text-[10px] text-on-surface-variant font-medium leading-relaxed italic opacity-70">
-                  {t('auto_upgrade_hint').replace('{amount}', `฿${(nextTier.min - currentSpending).toLocaleString()}`).replace('{role}', nextTier.role)}
+                  {t('auto_upgrade_hint').replace('{amount}', `฿${(nextTier.min - currentSpending).toLocaleString()}`).replace('{role}', t(nextTier.role.toLowerCase()) || nextTier.role)}
                 </p>
               </div>
             )}
@@ -279,7 +280,7 @@ export default function Dashboard() {
               
               <div className="flex-1 flex flex-col">
                 <div className="h-[240px] w-full relative mb-6">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="99%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={tierStats}
@@ -362,7 +363,7 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-        <Link to="/profile" className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8">
+        <Link to="/shop" className="p-8 sm:p-10 bg-surface-container rounded-[2rem] sm:rounded-[3rem] border border-outline card-hover group flex flex-col gap-6 sm:gap-8">
           <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-[1rem] sm:rounded-[1.25rem] bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-primary/5">
             <CreditCard className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
@@ -466,7 +467,7 @@ export default function Dashboard() {
                           {currentMember?.role === role && (
                             <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-2 block animate-pulse">{t('current_tier')}</span>
                           )}
-                          <h4 className="text-2xl sm:text-3xl font-black font-heading tracking-tighter text-on-surface uppercase">{role}</h4>
+                          <h4 className="text-2xl sm:text-3xl font-black font-heading tracking-tighter text-on-surface uppercase">{t(role.toLowerCase()) || role}</h4>
                         </div>
                         <div className={`h-12 w-12 rounded-2xl ${TIER_COLORS[role] || 'bg-slate-400'} flex items-center justify-center shadow-lg`}>
                           <Star className="w-6 h-6 text-white" />
